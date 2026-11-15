@@ -1641,9 +1641,6 @@ fun getCurrentLayoutColumnCount(keyboardLayout: Int): Int {
     return columnCount
 }
 
-// the frost panel's own margin around the keys, as padding on the keyboard view (IMEService)
-const val PANEL_INSET_DP = 6
-
 fun getCurrentDisplayWidth(ctx: Context): Int {
     val displayMetrics = ctx.resources.displayMetrics
     return (displayMetrics.widthPixels / displayMetrics.density).toInt()
@@ -1656,7 +1653,7 @@ fun getAutoKeyWidth(
     ctx: Context,
 ): Int {
     val screenWidth = getCurrentDisplayWidth(ctx)
-    val availableWidth = screenWidth - (keyPadding * 2) - (PANEL_INSET_DP * 2)
+    val availableWidth = screenWidth - (keyPadding * 2)
     val multiplier =
         when (position) {
             KeyboardPosition.Dual -> 2

@@ -1518,9 +1518,9 @@ fun magma(): Pair<ColorScheme, ColorScheme> {
     return Pair(light, dark)
 }
 
-// thevoid: a dark frost panel (drawn by the IME window, see IMEService.dressPanel) with keys of
-// translucent white on it and a hairline edge, after Wurstfinger. no tint. light is thevoid's light
-// theme (Dawnfox, bekh's kitty light): the same keys in its ink on a milky panel. thevoid's `light`
+// thevoid: a solid black panel (drawn by the IME window in `background`'s colour, see
+// IMEService.dressPanel) with keys of translucent white on it and a hairline edge, after Wurstfinger.
+// light is thevoid's light theme (Dawnfox, bekh's kitty light): the same keys in its ink on its page. thevoid's `light`
 // flips android's night mode, so the system theme mode picks between them.
 fun thevoid(): Pair<ColorScheme, ColorScheme> = Pair(thevoidLight(), thevoidDark())
 

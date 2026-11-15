@@ -5,7 +5,7 @@ the keyboard for thevoid (`~/tower/forge/thevoid`), bekh's Android shell. a fork
 
 the deal: Thumb-Key's engine stays exactly as it is (swipe recognition, layouts, text processing,
 settings); only the look is ours. the bar is Wurstfinger, the iOS MessagEase keyboard bekh uses, made
-darker: a heavy dark frost panel with rounded corners, keys of faint glass with a hairline edge on it,
+darker: one solid black surface edge to edge, keys of faint glass with a hairline edge on it,
 the big letter white, the flicks grey, symbols dimmer, nothing moves. the brief and the why live in
 `~/tower/forge/thevoid/docs/input.md`, "the keyboard for messages".
 
@@ -14,15 +14,12 @@ the big letter white, the flicks grey, symbols dimmer, nothing moves. the brief 
 mostly defaults, one new setting; a user can still pick any upstream theme or layout.
 
 - **the panel** (`IMEService.dressPanel`): the IME window is exactly the keyboard's rectangle and
-  already translucent, so its background is the panel: a `GradientDrawable` (radius 22 dp, `#101012`
-  at 80%) plus `Window.setBackgroundBlurRadius` (40 dp). Android rounds the blur to the drawable's
-  outline, so the drawable goes on before the blur. if cross-window blur is off (battery saver, older
-  Android) the tint goes to 95% instead, via `addCrossWindowBlurEnabledListener`. the keys sit 6 dp
-  inside it (`PANEL_INSET_DP` in `Utils.kt`: view padding, and subtracted in `getAutoKeyWidth`).
-  only the top corners are round, the bottom edge is flush with the screen's: the blur rounds all four
-  corners alike or none (a top-only outline is a path, and the blur goes square and shows unrounded
-  past the top corners), so the window hangs one radius below the screen (`FLAG_LAYOUT_NO_LIMITS`,
-  `y = -radius`), its rounded bottom corners off it, and the view gets that radius back as padding.
+  translucent by default, so its background is the panel: an opaque `ColorDrawable`, `#000000` dark,
+  `#FAF4ED` light, the same colour as the palette's `background`. full screen width, square corners,
+  no inset, no blur, flush with the screen's bottom edge. matching the palette matters: Thumb-Key's
+  backdrop setting paints `background` over the keys' area (his phone's screenshot showed it on), so a
+  panel of any other colour reads as a frame around a box. with them equal, backdrop on or off is one surface
+  (on, it's 6 dp taller at the top). the keys' own 3 dp padding is the only margin.
 - **the system's IME nav buttons** (back chevron, keyboard switcher) used to hang over the space bar
   and return; on API 35+ the IME hides its caption bar (`insetsController.hide(captionBar())`) and
   Android drops them.
@@ -31,7 +28,7 @@ mostly defaults, one new setting; a user can still pick any upstream theme or la
   13% (`DEFAULT_KEY_BORDER_WIDTH` 4 = 0.4 dp), flicks `#B5B5B7`, symbols the same at half alpha
   (`MUTED`). measured off Wurstfinger: panel `#22`, tile `#2D`, outline `#42`, flicks `#B5`, symbols `#6C`.
 - **light**: `thevoid()` is a pair, Dawnfox for light (ink `#575279` keys at 6%, flicks `#797593`, panel
-  `#F2E9E1` at 80%) and the dark above. thevoid's `light` word flips android's night mode, the system theme
+  `#FAF4ED`) and the dark above. thevoid's `light` word flips android's night mode, the system theme
   mode picks the pair's half, and `IMEService.onConfigurationChanged` re-dresses the panel to match.
 - **sizes** (`fontSizeVariantToFontSize`): the big letter is the key / 2.9 (was 2.5), flicks / 4 (was
   5), Wurstfinger's proportions. big letter Medium weight, the rest Normal (upstream bolds everything).
@@ -66,22 +63,21 @@ adb shell ime set com.bekh.thevoid.keys.debug/com.dessalines.thumbkey.IMEService
 the emulator, and how to check the keyboard by script, is in `~/tower/forge/thevoid/docs/build.md`.
 on nothing1 LatinIME and the F-Droid Thumb-Key are disabled (`ime disable`), so ours is the only one.
 
-**judging the frost:** `tools/frosttest/build.sh` builds and installs a 30-line app (no gradle) with
+**judging the look:** `tools/frosttest/build.sh` builds and installs a 30-line app (no gradle) with
 a loud gradient and big sharp text that stays put under the keyboard (`adjustNothing`);
-`adb shell am start -n com.bekh.frosttest/.Main` for colour, add `--ez black true` for pure black.
-`shots/` holds the current look over it: `letters.png`, `numeric.png`, `black.png`.
+`adb shell am start -n com.bekh.frosttest/.Main` for colour, add `--ez black true` for pure black or
+`--ei color 2172715` (`0x21272B`, decimal) for any flat colour. `shots/` holds the current look:
+`grey.png` over `#21272B`, `grey-backdrop.png` the same with backdrop on, `black.png` over black.
 
 ## gotchas
 
-- the frost shows only over apps that draw under the keyboard. most Android apps are `adjust=resize`:
-  they shrink above it and leave their flat window background behind the panel (the webview shell and
-  Messaging paint white there, and a 80% dark tint over white is a grey slab). judge it in frosttest.
-  `dumpsys SurfaceFlinger | grep blurRegions` proves the blur is on even when there's nothing to see.
 - the wrapper is needed: AGP 9.5 wants gradle 9.9, brew's gradle 8 can't build this. the first run
   downloads it and installs SDK platform 37 by itself.
 - the defaults are SQL column defaults (Room's `@ColumnInfo(defaultValue)`), so they only apply to a
   fresh database: a changed default doesn't show until `adb shell pm clear com.bekh.thevoid.keys.debug`
   (then `ime enable` / `ime set` again).
+- `am force-stop` on the keyboard (to rewrite its db by `run-as`, say) drops Android back to LatinIME
+  on the emulator; `ime set` again before the next shot.
 - a debug build cold-starts slowly (ART verifies the 200 layout classes for seconds), and the first tap
   on a field after an install or a fresh launch often doesn't raise it at all. `mInputShown=true` also
   flips long before anything is drawn, and a tap aimed at a key then lands on the app. wait for the
