@@ -65,6 +65,7 @@ import com.dessalines.thumbkey.utils.circularDirection
 import com.dessalines.thumbkey.utils.colorVariantToColor
 import com.dessalines.thumbkey.utils.deleteWordBeforeCursor
 import com.dessalines.thumbkey.utils.doneKeyAction
+import com.dessalines.thumbkey.utils.LocalFlickScale
 import com.dessalines.thumbkey.utils.fontSizeVariantToFontSize
 import com.dessalines.thumbkey.utils.isPasswordField
 import com.dessalines.thumbkey.utils.nextWordAfterCursor
@@ -1004,6 +1005,7 @@ fun KeyText(
             fontSizeVariant = key.size,
             keySize = keySize,
             isUpperCase = isUpperCase,
+            flickScale = LocalFlickScale.current,
         )
 
     val display =

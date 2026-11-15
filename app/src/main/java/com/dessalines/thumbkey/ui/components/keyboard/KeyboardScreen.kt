@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -61,6 +62,7 @@ import com.dessalines.thumbkey.db.DEFAULT_KEY_WIDTH
 import com.dessalines.thumbkey.db.DEFAULT_MIN_SWIPE_LENGTH
 import com.dessalines.thumbkey.db.DEFAULT_NON_SQUARE_KEYS
 import com.dessalines.thumbkey.db.DEFAULT_POSITION
+import com.dessalines.thumbkey.db.DEFAULT_FLICK_SIZE
 import com.dessalines.thumbkey.db.DEFAULT_POSITION_PADDING
 import com.dessalines.thumbkey.db.DEFAULT_PUSHUP_SIZE
 import com.dessalines.thumbkey.db.DEFAULT_SLIDE_BACKSPACE_DEADZONE_ENABLED
@@ -79,6 +81,7 @@ import com.dessalines.thumbkey.keyboards.EMOJI_BACK_KEY_ITEM
 import com.dessalines.thumbkey.keyboards.KB_EN_THUMBKEY_MAIN
 import com.dessalines.thumbkey.keyboards.NUMERIC_KEY_ITEM
 import com.dessalines.thumbkey.keyboards.RETURN_KEY_ITEM
+import com.dessalines.thumbkey.utils.LocalFlickScale
 import com.dessalines.thumbkey.utils.CircularDragAction
 import com.dessalines.thumbkey.utils.ColorVariant
 import com.dessalines.thumbkey.utils.KeyAction
@@ -200,6 +203,7 @@ fun KeyboardScreen(
         ]
 
     val positionPadding = settings?.positionPadding ?: DEFAULT_POSITION_PADDING
+    val flickSize = settings?.flickSize ?: DEFAULT_FLICK_SIZE
 
     val pushupSizeDp = (settings?.pushupSize ?: DEFAULT_PUSHUP_SIZE).dp
     val ignoreBottomPadding = (settings?.ignoreBottomPadding ?: DEFAULT_IGNORE_BOTTOM_PADDING).toBool()
@@ -1104,9 +1108,11 @@ fun KeyboardScreen(
         }
 
         val drawKeyboards = @Composable {
-            drawKeyboard(keyboardPositionToAlignment(position), backdropEnabled, positionPadding)
-            if (position == KeyboardPosition.Dual) {
-                drawKeyboard(keyboardPositionToAlignment(KeyboardPosition.Right), false, positionPadding)
+            CompositionLocalProvider(LocalFlickScale provides flickSize / 100f) {
+                drawKeyboard(keyboardPositionToAlignment(position), backdropEnabled, positionPadding)
+                if (position == KeyboardPosition.Dual) {
+                    drawKeyboard(keyboardPositionToAlignment(KeyboardPosition.Right), false, positionPadding)
+                }
             }
         }
 

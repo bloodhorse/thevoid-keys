@@ -11,7 +11,7 @@ the big letter white, the flicks grey, symbols dimmer, nothing moves. the brief 
 
 ## what we changed
 
-mostly defaults, no new settings; a user can still pick any upstream theme or layout.
+mostly defaults, one new setting; a user can still pick any upstream theme or layout.
 
 - **the panel** (`IMEService.dressPanel`): the IME window is exactly the keyboard's rectangle and
   already translucent, so its background is the panel: a `GradientDrawable` (radius 22 dp, `#101012`
@@ -35,6 +35,10 @@ mostly defaults, no new settings; a user can still pick any upstream theme or la
   mode picks the pair's half, and `IMEService.onConfigurationChanged` re-dresses the panel to match.
 - **sizes** (`fontSizeVariantToFontSize`): the big letter is the key / 2.9 (was 2.5), flicks / 4 (was
   5), Wurstfinger's proportions. big letter Medium weight, the rest Normal (upstream bolds everything).
+- **small letters size** (the one setting we added): Look and feel → "Small letters size", a percent on
+  every flick (`SMALL`/`SMALLEST`; centers untouched), 50–150 in steps of 5, default 85. column
+  `flick_size` (db version 30, `MIGRATION_29_30`), carried to `KeyText` as `LocalFlickScale` from
+  `KeyboardScreen`. `shots/flicks.png` is 100 vs 85 side by side.
 - **no press animation**: upstream flashed the key and dropped the typed letter down it; both
   `AnimatedVisibility` blocks are gone from `KeyboardKey`. the pressed tint stays.
 - **`keyboards/CommonKeys.kt`** (shared by every layout): `EMOJI_KEY_ITEM` keeps its name but is the

@@ -55,6 +55,7 @@
     <string name="key_non_square">Use non-square keys</string>
     <string name="key_height">Key height: %1$s</string>
     <string name="key_width">Key width: %1$s</string>
+    <string name="flick_size">Small letters size: %1$s%%</string>
     <string name="bottom_offset">Bottom offset: %1$s</string>
     <string name="min_swipe_length">Minimum swipe length: %1$s</string>
     <string name="animation_speed">Animation speed: %1$s</string>

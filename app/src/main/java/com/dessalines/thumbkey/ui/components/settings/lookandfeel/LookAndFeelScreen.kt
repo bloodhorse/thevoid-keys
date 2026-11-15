@@ -59,6 +59,7 @@ import com.dessalines.thumbkey.db.DEFAULT_KEY_BORDER_WIDTH
 import com.dessalines.thumbkey.db.DEFAULT_KEY_HEIGHT
 import com.dessalines.thumbkey.db.DEFAULT_KEY_PADDING
 import com.dessalines.thumbkey.db.DEFAULT_KEY_RADIUS
+import com.dessalines.thumbkey.db.DEFAULT_FLICK_SIZE
 import com.dessalines.thumbkey.db.DEFAULT_KEY_WIDTH
 import com.dessalines.thumbkey.db.DEFAULT_NON_SQUARE_KEYS
 import com.dessalines.thumbkey.db.DEFAULT_POSITION
@@ -104,6 +105,8 @@ fun LookAndFeelScreen(
     var keyHeightSliderState by remember { mutableFloatStateOf(keyHeightState) }
     var keyWidthState = (settings?.keyWidth ?: DEFAULT_KEY_WIDTH).toFloat()
     var keyWidthSliderState by remember { mutableFloatStateOf(keyWidthState) }
+    var flickSizeState = (settings?.flickSize ?: DEFAULT_FLICK_SIZE).toFloat()
+    var flickSizeSliderState by remember { mutableFloatStateOf(flickSizeState) }
 
     var pushupSizeState = (settings?.pushupSize ?: DEFAULT_PUSHUP_SIZE).toFloat()
     var pushupSizeSliderState by remember { mutableFloatStateOf(pushupSizeState) }
@@ -165,6 +168,7 @@ fun LookAndFeelScreen(
                 nonSquareKeys = nonSquareKeysState.toInt(),
                 keyWidth = keyWidthState.toInt(),
                 keyHeight = keyHeightState.toInt(),
+                flickSize = flickSizeState.toInt(),
                 showToastOnLayoutSwitch = showToastOnLayoutSwitchState.toInt(),
                 disableFullscreenEditor = disableFullscreenEditorState.toInt(),
             ),
@@ -483,6 +487,29 @@ fun LookAndFeelScreen(
                             },
                         )
                     }
+
+                    SliderPreference(
+                        value = flickSizeState,
+                        sliderValue = flickSizeSliderState,
+                        onValueChange = {
+                            flickSizeState = it
+                            updateLookAndFeel()
+                        },
+                        onSliderValueChange = {
+                            flickSizeSliderState = it
+                        },
+                        valueRange = 50f..150f,
+                        valueSteps = 19,
+                        title = {
+                            Text(stringResource(R.string.flick_size, flickSizeSliderState.toInt().toString()))
+                        },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Outlined.FormatSize,
+                                contentDescription = null,
+                            )
+                        },
+                    )
 
                     SliderPreference(
                         value = keyPaddingState,

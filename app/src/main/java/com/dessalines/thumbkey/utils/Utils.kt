@@ -27,6 +27,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -227,10 +228,13 @@ fun colorVariantToColor(colorVariant: ColorVariant): Color =
         ColorVariant.MUTED -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.5F)
     }
 
+val LocalFlickScale = compositionLocalOf { 1f }
+
 fun fontSizeVariantToFontSize(
     fontSizeVariant: FontSizeVariant,
     keySize: Dp,
     isUpperCase: Boolean,
+    flickScale: Float = 1f,
 ): Dp {
     val divFactor =
         when (fontSizeVariant) {
@@ -248,7 +252,13 @@ fun fontSizeVariantToFontSize(
             1f
         }
 
-    return keySize.times(upperCaseFactor).div(divFactor)
+    val scale =
+        when (fontSizeVariant) {
+            FontSizeVariant.SMALL, FontSizeVariant.SMALLEST -> flickScale
+            else -> 1f
+        }
+
+    return keySize.times(upperCaseFactor * scale).div(divFactor)
 }
 
 val Dp.toPx get() = (this * Resources.getSystem().displayMetrics.density).value
