@@ -39,10 +39,10 @@ import android.view.WindowInsets
 private const val PANEL_RADIUS_DP = 22f
 private const val PANEL_BLUR_DP = 40f
 private const val PANEL_FROST = 0xCC101012.toInt()
-private const val PANEL_SOLID = 0xF2101012.toInt()
+private const val PANEL_SOLID = 0xCC101012.toInt()
 // thevoid's light: Dawnfox's quiet surface, milky
 private const val PANEL_FROST_LIGHT = 0xCCF2E9E1.toInt()
-private const val PANEL_SOLID_LIGHT = 0xF2F2E9E1.toInt()
+private const val PANEL_SOLID_LIGHT = 0xCCF2E9E1.toInt()
 
 class IMEService :
     InputMethodService(),
