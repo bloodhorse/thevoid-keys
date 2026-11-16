@@ -139,6 +139,9 @@ a loud gradient and big sharp text that stays put under the keyboard (`adjustNot
 - **wake his phone before any adb on it, installs included**: `adb -s 100.96.66.79:5555 shell input keyevent
   KEYCODE_WAKEUP`. an install landing while it dozes ends doze without a wake, and his tap-to-wake stays dead
   until the next proper wake (`~/tower/forge/thevoid/docs/phone.md` § tap to wake). then let it sleep on its own.
+- **a gesture script checks the keyboard is up before every step** (thevoid in front, `isOnScreen=true`): `input`
+  queues while the screen is off and lets go into whatever app is in front the moment anyone wakes it, his own
+  chats included.
 
 - **Room checks column defaults after a migration**: changing an existing column's `defaultValue` without
   rebuilding the table crashes the upgrade ("Migration didn't properly handle"). new columns go in with
