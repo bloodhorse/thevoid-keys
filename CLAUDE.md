@@ -23,7 +23,8 @@ mostly defaults and a handful of settings; a user can still pick any upstream th
   `onDragEnd`'s plain-flick branch calls it; drag-return and circular drag still use upstream's code. two
   things this fixed besides the arc: Thumb-Key's drag offsets start only after Compose's touch slop (8 dp, 21 px
   on his phone), so "60 px" really needed ~81; and when the curl-back test passed with drag-return and circles
-  both off, upstream typed the tap letter. JVM tests: `./gradlew testDebugUnitTest` (`GestureReaderTest`,
+  both off, upstream typed the tap letter. his phone's line is 32 px (~12 dp, kept by grant.sh): his taps move 0 dp,
+  his short flicks 16–24 dp, and the smoothing shaves 0–7 px off his real drags, never across 32. JVM tests: `./gradlew testDebugUnitTest` (`GestureReaderTest`,
   Wurstfinger's pins plus arcs at his phone's numbers).
 - **hold for a digit**: holding a letter still types the digit in its slot on the number panel
   (`numericKey`, the same `[i][j]` of `modes.numeric`); a key's own `longPress` wins. the timeout is a setting
@@ -31,6 +32,17 @@ mostly defaults and a handful of settings; a user can still pick any upstream th
   `ViewConfiguration` that delegates everything but `longPressTimeoutMillis`, provided around each key.
 - **the number panel is a PC numpad** (`keyboards/NumericENMessagEase.kt`, shared by every MessagEase layout):
   7 8 9 on top, 1 2 3 at the bottom, 0 where it was; only the digits moved, the symbols around them stayed.
+- **swiping left across backspace deletes as the thumb moves** (Wurstfinger's delete slide, `deleteSwipeStep`
+  in `KeyboardKey.kt`, the `DELETE_SWIPE_*` constants at the top): past 28 dp left of touch-down it goes live,
+  one character per 14 dp of travel times a gain from the thumb's speed over the last 40 ms of the trail (1x at
+  200 dp/s and under, 4x at 1500 and over, smoothstep between), a `TEXT_HANDLE_MOVE` tick each (vibrate for
+  slide gestures). nothing is selected; what it eats goes in a buffer, and dragging back right in the same
+  swipe re-commits it in order through the same stepping, until the buffer is empty (no forward delete). lift
+  ends it. this replaced upstream's slide-select-delete on backspace, so its "Backspace: allow normal swipes"
+  deadzone switch does nothing now. a left flick under 28 dp is still delete-word, a right flick still
+  delete-word-after. on his phone over a 71-character line: 152 dp slow (~76 dp/s), 8 characters; 223 dp in 150 ms,
+  52; 114 dp left and back past the start, 5 eaten and 5 put back; a 23 dp flick, one word (logcat `backspace swipe:`,
+  the flick log `live`).
 - **holding backspace still repeats like iOS** (`KeyboardKey.kt`, the `BACKSPACE_REPEAT_*` constants at the
   top): the first repeat at 400 ms, then characters at an interval easing from 120 to 25 ms over 1.5 s, then
   from 2 s whole words (`deleteWordBeforeCursor`) every 300 ms; a light tick (`TEXT_HANDLE_MOVE`) on each, when
@@ -123,6 +135,10 @@ a loud gradient and big sharp text that stays put under the keyboard (`adjustNot
 `grey.png` over `#21272B`, `grey-backdrop.png` the same with backdrop on, `black.png` over black.
 
 ## gotchas
+
+- **wake his phone before any adb on it, installs included**: `adb -s 100.96.66.79:5555 shell input keyevent
+  KEYCODE_WAKEUP`. an install landing while it dozes ends doze without a wake, and his tap-to-wake stays dead
+  until the next proper wake (`~/tower/forge/thevoid/docs/phone.md` § tap to wake). then let it sleep on its own.
 
 - **Room checks column defaults after a migration**: changing an existing column's `defaultValue` without
   rebuilding the table crashes the upgrade ("Migration didn't properly handle"). new columns go in with

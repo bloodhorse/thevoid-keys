@@ -117,6 +117,17 @@ private const val BACKSPACE_REPEAT_EASE_MS = 1500L
 private const val BACKSPACE_REPEAT_WORDS_AFTER_MS = 2000L
 private const val BACKSPACE_REPEAT_WORD_MS = 300L
 
+// swiping left across backspace deletes as the thumb moves (Wurstfinger's delete slide): live past ACTIVATE,
+// one character per STEP of travel times a gain that rides the thumb's speed over the last SPEED_WINDOW, 1x at
+// SLOW and below, MAX_GAIN at FAST and above, smoothstep between. dragging back right in the same swipe puts
+// back what it ate
+private const val DELETE_SWIPE_ACTIVATE_DP = 28f
+private const val DELETE_SWIPE_STEP_DP = 14f
+private const val DELETE_SWIPE_SPEED_WINDOW_MS = 40f
+private const val DELETE_SWIPE_SLOW_DP_S = 200f
+private const val DELETE_SWIPE_FAST_DP_S = 1500f
+private const val DELETE_SWIPE_MAX_GAIN = 4f
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun KeyboardKey(
@@ -231,6 +242,11 @@ fun KeyboardKey(
     }
 
     val repeatsDelete = key.slideType == SlideType.DELETE
+    var deleteLive by remember { mutableStateOf(false) }
+    var deleteResidual by remember { mutableFloatStateOf(0f) }
+    var deleteLastX by remember { mutableFloatStateOf(0f) }
+    val deleteEaten = remember { StringBuilder() }
+    var deleteTicks by remember { mutableIntStateOf(0) }
     var deleteRepeating by remember { mutableStateOf(false) }
 
     // holding a letter types the digit in its slot on the number panel
@@ -295,6 +311,59 @@ fun KeyboardKey(
                 audioManager.playSoundEffect(AudioManager.FX_KEY_CLICK, .1f)
             }
         }
+    }
+
+    // the thumb's horizontal speed in dp/s over the last few ms of the trail
+    fun trailSpeed(): Float {
+        val pts = trail.points
+        if (pts.size < 2) return 0f
+        val last = pts.last()
+        var i = pts.size - 2
+        while (i > 0 && last[0] - pts[i][0] < DELETE_SWIPE_SPEED_WINDOW_MS) i--
+        val dt = last[0] - pts[i][0]
+        return if (dt > 0) abs(last[1] - pts[i][1]) / density / dt * 1000 else 0f
+    }
+
+    fun deleteSwipeStep() {
+        val x = trail.points.lastOrNull()?.get(1) ?: return
+        if (!deleteLive) {
+            if (x / density > -DELETE_SWIPE_ACTIVATE_DP) return
+            deleteLive = true
+            deleteLastX = x
+            return
+        }
+        val t = ((trailSpeed() - DELETE_SWIPE_SLOW_DP_S) / (DELETE_SWIPE_FAST_DP_S - DELETE_SWIPE_SLOW_DP_S)).coerceIn(0f, 1f)
+        val gain = 1 + (DELETE_SWIPE_MAX_GAIN - 1) * t * t * (3 - 2 * t)
+        deleteResidual += (x - deleteLastX) / density * gain
+        deleteLastX = x
+        val ic = ime.currentInputConnection ?: return
+        while (deleteResidual <= -DELETE_SWIPE_STEP_DP) {
+            deleteResidual += DELETE_SWIPE_STEP_DP
+            val before = ic.getTextBeforeCursor(2, 0) ?: ""
+            if (before.isEmpty()) {
+                deleteResidual = 0f
+                break
+            }
+            val n = if (before.length == 2 && Character.isSurrogatePair(before[0], before[1])) 2 else 1
+            deleteEaten.append(before, before.length - n, before.length)
+            ic.deleteSurroundingText(n, 0)
+            deleteTicks++
+            if (vibrateOnSlide) view.performHapticFeedback(slideHapticConstant)
+        }
+        while (deleteResidual >= DELETE_SWIPE_STEP_DP) {
+            if (deleteEaten.isEmpty()) {
+                deleteResidual = 0f
+                break
+            }
+            deleteResidual -= DELETE_SWIPE_STEP_DP
+            val end = deleteEaten.length
+            val n = if (end >= 2 && Character.isSurrogatePair(deleteEaten[end - 2], deleteEaten[end - 1])) 2 else 1
+            ic.commitText(deleteEaten.substring(end - n), 1)
+            deleteEaten.setLength(end - n)
+            deleteTicks++
+            if (vibrateOnSlide) view.performHapticFeedback(slideHapticConstant)
+        }
+        if (deleteEaten.isEmpty() && deleteResidual > 0) deleteResidual = 0f
     }
 
     // a drag start cancels the press, and so this wait: a flick or slide before the first repeat stays one.
@@ -576,6 +645,10 @@ fun KeyboardKey(
                 detectDragGestures(
                     onDragStart = {
                         if (deleteRepeating) return@detectDragGestures
+                        deleteLive = false
+                        deleteResidual = 0f
+                        deleteEaten.setLength(0)
+                        deleteTicks = 0
                         isDragged.value = true
                         if (key.slideType == SlideType.MOVE_CURSOR) {
                             cursorAtDown = startSelection(ime).start
@@ -715,39 +788,7 @@ fun KeyboardKey(
                                 }
                             }
                         } else if (key.slideType == SlideType.DELETE && slideEnabled) {
-                            if (!selection.active) {
-                                timeOfLastAccelerationInput = System.currentTimeMillis()
-                                // Activate selection, first detection is large enough to preserve swipe actions.
-                                if ((
-                                        slideBackspaceDeadzoneEnabled &&
-                                            (abs(offsetX) > slideOffsetTrigger)
-                                    ) ||
-                                    !slideBackspaceDeadzoneEnabled
-                                ) {
-                                    // reset offsetX, do not reset offsetY when sliding, it will break selecting
-                                    offsetX = 0f
-                                    selection = startSelection(ime)
-                                }
-                            } else {
-                                val cursorMovement =
-                                    slideCursorDistance(offsetX, timeOfLastAccelerationInput, slideCursorMovementMode, slideSensitivity)
-                                timeOfLastAccelerationInput = System.currentTimeMillis()
-                                if (cursorMovement >= 1 || cursorMovement <= -1) {
-                                    if (cursorMovement < 0.00) {
-                                        selection.left(abs(cursorMovement))
-                                    } else {
-                                        selection.right(abs(cursorMovement))
-                                    }
-                                    ime.currentInputConnection.setSelection(
-                                        selection.start,
-                                        selection.end,
-                                    )
-                                    // reset offsetX, do not reset offsetY when sliding, it will break selecting
-                                    offsetX = 0f
-                                    // selection has changed; give feedback
-                                    if (vibrateOnSlide) view.performHapticFeedback(slideHapticConstant)
-                                }
-                            }
+                            deleteSwipeStep()
                         }
                     },
                     onDragEnd = {
@@ -762,7 +803,14 @@ fun KeyboardKey(
                             key.slideType == SlideType.MOVE_CURSOR && cursorAtDown >= 0 && !selection.active &&
                                 slideHoldTicks == 0 && readTrail().isCircular
 
-                        if (circledSpace) {
+                        if (deleteLive) {
+                            Log.d(TAG, "backspace swipe: $deleteTicks ticks, ${deleteEaten.length} eaten")
+                            deleteLive = false
+                            deleteEaten.setLength(0)
+                            action = KeyAction.Noop
+                            logTouch(action, "live")
+                            doneKeyAction(scope, action, isDragged, releasedKey, animationHelperSpeed)
+                        } else if (circledSpace) {
                             // a circle on the space bar selects the word the cursor was in at touch-down;
                             // the slide may have walked the cursor while the circle was drawn
                             hasSlideMoveCursorTriggered = false
