@@ -40,6 +40,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -48,6 +49,8 @@ import androidx.compose.ui.unit.lerp
 import com.dessalines.thumbkey.IMEService
 import com.dessalines.thumbkey.utils.CircularDirection
 import com.dessalines.thumbkey.utils.CircularDragAction
+import com.dessalines.thumbkey.utils.Flicklog
+import com.dessalines.thumbkey.utils.Flicklog.watch
 import com.dessalines.thumbkey.utils.FontSizeVariant
 import com.dessalines.thumbkey.utils.KeyAction
 import com.dessalines.thumbkey.utils.KeyC
@@ -185,6 +188,13 @@ fun KeyboardKey(
     var timeOfLastAccelerationInput by remember { mutableLongStateOf(0L) }
     var positions by remember { mutableStateOf(listOf<Offset>()) }
     var maxOffset by remember { mutableStateOf(Offset(0f, 0f)) }
+    val trail = remember { Flicklog.Trail() }
+    val density = LocalDensity.current.density
+
+    fun logTouch(
+        action: KeyAction,
+        path: String,
+    ) = Flicklog.write(ctx, trail, key, action, path, density, keyWidth, keyHeight, minSwipeLength, isPasswordField)
 
     var selection by remember { mutableStateOf(Selection()) }
 
@@ -390,6 +400,7 @@ fun KeyboardKey(
                     (Modifier)
                 },
             ).background(color = backgroundColor)
+            .watch(trail)
             // Note: pointerInput has a delay when switching keyboards, so you must use this
             .combinedClickable(
                 interactionSource = interactionSource,
@@ -429,6 +440,7 @@ fun KeyboardKey(
                         onKeyEvent = onKeyEvent,
                         onSketchAction = onSketchAction,
                     )
+                    logTouch(action, "tap")
                     doneKeyAction(scope, action, isDragged, releasedKey, animationHelperSpeed)
                 },
                 onLongClick = {
@@ -453,6 +465,7 @@ fun KeyboardKey(
                             onKeyEvent = onKeyEvent,
                             onSketchAction = onSketchAction,
                         )
+                        logTouch(action, "long")
                         doneKeyAction(scope, action, isDragged, releasedKey, animationHelperSpeed)
                         if (vibrateOnTap) {
                             view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
@@ -647,6 +660,7 @@ fun KeyboardKey(
                         ) {
                             // The repeat coroutine already handled all movement/deletion; nothing more to do.
                             action = KeyAction.Noop
+                            logTouch(action, "hold")
                             doneKeyAction(scope, action, isDragged, releasedKey, animationHelperSpeed)
                         } else if (key.slideType == SlideType.NONE ||
                             !slideEnabled ||
@@ -752,6 +766,7 @@ fun KeyboardKey(
                                 onKeyEvent = onKeyEvent,
                                 onSketchAction = onSketchAction,
                             )
+                            logTouch(action, "drag")
                             doneKeyAction(
                                 scope,
                                 action,
@@ -798,6 +813,7 @@ fun KeyboardKey(
                                     view.performHapticFeedback(HapticFeedbackConstants.REJECT)
                                 }
                             }
+                            logTouch(action, "delete")
                             doneKeyAction(
                                 scope,
                                 action,
@@ -814,6 +830,7 @@ fun KeyboardKey(
                                         KeyEvent.KEYCODE_DPAD_RIGHT,
                                     ),
                                 )
+                            logTouch(action, "slide")
                             doneKeyAction(
                                 scope,
                                 action,

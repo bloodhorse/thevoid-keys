@@ -49,6 +49,15 @@ mostly defaults, one new setting; a user can still pick any upstream theme or la
 - **`app/build.gradle.kts`**: `applicationId` is `com.bekh.thevoid.keys` (debug adds `.debug`); the
   Kotlin namespace stays `com.dessalines.thumbkey` so upstream merges stay painless.
 
+- **the flick log** (`utils/Flicklog.kt`): a passive pointer watcher on every key (Initial pass, consumes
+  nothing) records the thumb's whole path with timestamps; every place a key decides (`logTouch` before each
+  `doneKeyAction` in `KeyboardKey`) appends one json line to `files/flicks.jsonl`: the key, what it typed,
+  which path decided it (`tap` is Compose's click, under touch slop; `drag` is the flick reader), the points
+  in px with density. password fields are never written. 8 MB, then it rolls to `flicks.old.jsonl`.
+  `python3 tools/flicks.py` pulls it and reports: travel histograms for taps and flicks, the misfires he
+  corrected (a touch, backspace within 2.5s, the same key again with a different result), and which
+  distance-and-speed rule would rescue the missed flicks without breaking honest taps. `--tail N` lists touches.
+
 ## build and install
 
 ```bash
