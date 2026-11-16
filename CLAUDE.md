@@ -31,6 +31,14 @@ mostly defaults and a handful of settings; a user can still pick any upstream th
   `ViewConfiguration` that delegates everything but `longPressTimeoutMillis`, provided around each key.
 - **the number panel is a PC numpad** (`keyboards/NumericENMessagEase.kt`, shared by every MessagEase layout):
   7 8 9 on top, 1 2 3 at the bottom, 0 where it was; only the digits moved, the symbols around them stayed.
+- **holding backspace still repeats like iOS** (`KeyboardKey.kt`, the `BACKSPACE_REPEAT_*` constants at the
+  top): the first repeat at 400 ms, then characters at an interval easing from 120 to 25 ms over 1.5 s, then
+  from 2 s whole words (`deleteWordBeforeCursor`) every 300 ms; a light tick (`TEXT_HANDLE_MOVE`) on each, when
+  vibrate on tap is on. it waits on the press, which a drag start cancels, so a flick or slide before 400 ms
+  stays a flick or slide; once it repeats only lifting stops it (it checks the flick log's finger-down before
+  each delete), and the release types nothing more. backspace has no `longPress` any more. on his phone:
+  held 1 s, 7 characters; 2 s, 27 and a word; 3.5 s, 27 and 6 words (logcat `backspace repeat:`, the flick
+  log `repeat`).
 - **a circle on the space bar selects the word** the cursor was in at drag start (letters and digits either
   side, `selectWordAt` in `Utils.kt`). the circle test is Wurstfinger's (span over 270°, circularity 0.3, turn
   consistency 0.8, compactness 0.4, path over twice the swipe length). with slide on, the cursor walks while the

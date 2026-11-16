@@ -361,7 +361,6 @@ val BACKSPACE_KEY_ITEM =
         left = DELETE_WORD_BEFORE_CURSOR_KEYC,
         right = DELETE_WORD_AFTER_CURSOR_KEYC,
         backgroundColor = SURFACE_VARIANT,
-        longPress = DeleteWordBeforeCursor,
     )
 
 val BACKSPACE_WIDE_KEY_ITEM = BACKSPACE_KEY_ITEM.copy(widthMultiplier = 3)

@@ -108,6 +108,15 @@ private const val SLIDE_HOLD_SLOW_TICK_THRESHOLD = 4 // number of ticks at the s
 private const val SLIDE_HOLD_SLOW_TICK_DELAY_MS = 300L // ms between ticks during slow phase
 private const val SLIDE_HOLD_FAST_TICK_DELAY_MS = 100L // ms between ticks during fast phase
 
+// holding backspace still: the first repeat, then characters at an interval easing from START to END over
+// EASE, then whole words at a steady pace from WORDS_AFTER (all from touch-down)
+private const val BACKSPACE_REPEAT_DELAY_MS = 400L
+private const val BACKSPACE_REPEAT_START_MS = 120L
+private const val BACKSPACE_REPEAT_END_MS = 25L
+private const val BACKSPACE_REPEAT_EASE_MS = 1500L
+private const val BACKSPACE_REPEAT_WORDS_AFTER_MS = 2000L
+private const val BACKSPACE_REPEAT_WORD_MS = 300L
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun KeyboardKey(
@@ -221,9 +230,12 @@ fun KeyboardKey(
         return GestureReader.read(pts, readerConfig, minSwipeLength.toDouble())
     }
 
+    val repeatsDelete = key.slideType == SlideType.DELETE
+    var deleteRepeating by remember { mutableStateOf(false) }
+
     // holding a letter types the digit in its slot on the number panel
     val holdAction =
-        key.longPress ?: run {
+        if (repeatsDelete) null else key.longPress ?: run {
             val c = key.center.action
             val n = numericKey?.center?.action
             if (c is KeyAction.CommitText && c.text.length == 1 && c.text[0].isLetter() && n is KeyAction.CommitText) n else null
@@ -282,6 +294,41 @@ fun KeyboardKey(
             if (soundOnTap) {
                 audioManager.playSoundEffect(AudioManager.FX_KEY_CLICK, .1f)
             }
+        }
+    }
+
+    // a drag start cancels the press, and so this wait: a flick or slide before the first repeat stays one.
+    // once it repeats it runs in the key's scope, so movement can't stop it; only lifting the thumb does
+    LaunchedEffect(isPressed) {
+        if (!isPressed || !repeatsDelete) return@LaunchedEffect
+        deleteRepeating = false
+        val downAt = System.currentTimeMillis()
+        delay(BACKSPACE_REPEAT_DELAY_MS)
+        if (!trail.open) return@LaunchedEffect
+        deleteRepeating = true
+        scope.launch {
+            var chars = 0
+            var words = 0
+            val firstAt = System.currentTimeMillis()
+            while (trail.open) {
+                val now = System.currentTimeMillis()
+                val pause =
+                    if (now - downAt >= BACKSPACE_REPEAT_WORDS_AFTER_MS) {
+                        deleteWordBeforeCursor(ime)
+                        words++
+                        BACKSPACE_REPEAT_WORD_MS
+                    } else {
+                        ime.currentInputConnection.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL))
+                        ime.currentInputConnection.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL))
+                        chars++
+                        val t = ((now - firstAt).toFloat() / BACKSPACE_REPEAT_EASE_MS).coerceAtMost(1f)
+                        (BACKSPACE_REPEAT_START_MS + (BACKSPACE_REPEAT_END_MS - BACKSPACE_REPEAT_START_MS) * t).toLong()
+                    }
+                if (vibrateOnTap) view.performHapticFeedback(slideHapticConstant)
+                delay(pause)
+            }
+            Log.d(TAG, "backspace repeat: $chars chars, $words words")
+            logTouch(KeyAction.Noop, "repeat")
         }
     }
 
@@ -451,6 +498,10 @@ fun KeyboardKey(
                 indication = null,
                 hapticFeedbackEnabled = false, // We manually trigger haptics instead
                 onClick = {
+                    if (deleteRepeating) {
+                        deleteRepeating = false
+                        return@combinedClickable
+                    }
                     // Set the last key info, and the tap count
                     val cAction = key.center.action
                     lastAction.value?.let { (lastAction, time) ->
@@ -524,6 +575,7 @@ fun KeyboardKey(
             .pointerInput(key1 = id) {
                 detectDragGestures(
                     onDragStart = {
+                        if (deleteRepeating) return@detectDragGestures
                         isDragged.value = true
                         if (key.slideType == SlideType.MOVE_CURSOR) {
                             cursorAtDown = startSelection(ime).start
@@ -531,6 +583,7 @@ fun KeyboardKey(
                     },
                     onDrag = { change, dragAmount ->
                         change.consume()
+                        if (deleteRepeating) return@detectDragGestures
                         val (x, y) = dragAmount
                         offsetX += x
                         offsetY += y
@@ -698,6 +751,10 @@ fun KeyboardKey(
                         }
                     },
                     onDragEnd = {
+                        if (deleteRepeating) {
+                            deleteRepeating = false
+                            return@detectDragGestures
+                        }
                         lateinit var action: KeyAction
 
                         val slideHoldTicks = resetSlideHoldVariables()
