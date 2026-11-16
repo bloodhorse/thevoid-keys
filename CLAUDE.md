@@ -49,10 +49,6 @@ mostly defaults, one new setting; a user can still pick any upstream theme or la
 - **`app/build.gradle.kts`**: `applicationId` is `com.bekh.thevoid.keys` (debug adds `.debug`); the
   Kotlin namespace stays `com.dessalines.thumbkey` so upstream merges stay painless.
 
-- **the space row is half height** (`KeyboardScreen`, the main keyboard's rows): a row of only the space bar
-  and return gets `keyHeight * 0.5`; the letters stay square. 88 dp keys, 38% of his screen (it was 43%).
-  bekh tried 70 dp non-square keys first and they looked shittier. emoji and clipboard modes still size
-  themselves to full rows, so they're half a row taller than the keyboard (nobody uses them).
 - **the flick log** (`utils/Flicklog.kt`): a passive pointer watcher on every key (Initial pass, consumes
   nothing) records the thumb's whole path with timestamps; every place a key decides (`logTouch` before each
   `doneKeyAction` in `KeyboardKey`) appends one json line to `files/flicks.jsonl`: the key, what it typed,

@@ -88,7 +88,6 @@ import com.dessalines.thumbkey.utils.KeyAction
 import com.dessalines.thumbkey.utils.KeyboardLayout
 import com.dessalines.thumbkey.utils.KeyboardMode
 import com.dessalines.thumbkey.utils.KeyboardPosition
-import com.dessalines.thumbkey.keyboards.RETURN_KEYC
 import com.dessalines.thumbkey.utils.SlideType
 import com.dessalines.thumbkey.utils.TAG
 import com.dessalines.thumbkey.utils.getAutoKeyWidth
@@ -917,8 +916,6 @@ fun KeyboardScreen(
             ) {
                 Column(modifier = modifierPositionPadding) {
                     keyboard.arr.forEachIndexed { i, row ->
-                        // a row of only the space bar and return is half height: nobody needs a square space bar
-                        val rowHeight = if (row.all { it.slideType == SlideType.MOVE_CURSOR || it.center == RETURN_KEYC }) keyHeight * 0.5f else keyHeight
                         Row {
                             row.forEachIndexed { j, key ->
                                 Column {
@@ -942,7 +939,7 @@ fun KeyboardScreen(
                                         lastAction = lastAction,
                                         legendHeight = legendHeight,
                                         legendWidth = legendWidth,
-                                        keyHeight = rowHeight,
+                                        keyHeight = keyHeight,
                                         keyWidth = keyWidth,
                                         keyPadding = keyPadding,
                                         keyBorderWidth = keyBorderWidthFloat,
