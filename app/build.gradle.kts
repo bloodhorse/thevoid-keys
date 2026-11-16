@@ -95,6 +95,8 @@ android {
 }
 
 dependencies {
+    testImplementation("junit:junit:4.13.2")
+
     // Exporting / importing DB helper
     implementation("com.github.dessalines:room-db-export-import:0.1.1")
 

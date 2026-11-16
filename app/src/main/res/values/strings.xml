@@ -58,6 +58,15 @@
     <string name="flick_size">Small letters size: %1$s%%</string>
     <string name="bottom_offset">Bottom offset: %1$s</string>
     <string name="min_swipe_length">Minimum swipe length: %1$s</string>
+    <string name="hold_time">Hold for a digit: %1$s ms</string>
+    <string name="hold_time_description">Holding a letter still this long types the digit in its place on the number panel</string>
+    <string name="smoothing_window">Flick smoothing: %1$s points</string>
+    <string name="smoothing_window_description">How many touch points the flick reader averages over. More is calmer, less is quicker</string>
+    <string name="outline_color">Key outline colour</string>
+    <string name="outline_strength">Key outline strength: %1$s%%</string>
+    <string name="outline_white">White</string>
+    <string name="outline_cyan">Cyan</string>
+    <string name="outline_magenta">Magenta</string>
     <string name="animation_speed">Animation speed: %1$s</string>
     <string name="animation_helper_speed">Animation helper speed: %1$s</string>
     <string name="slide_enable">Slide gestures</string>

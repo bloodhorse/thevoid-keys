@@ -8,12 +8,13 @@ import com.dessalines.thumbkey.utils.FontSizeVariant.*
 import com.dessalines.thumbkey.utils.KeyAction.*
 import com.dessalines.thumbkey.utils.SwipeNWay.*
 
+// thevoid: a PC numpad, 7 8 9 on top; the symbols around each digit stay where they were
 val KB_EN_MESSAGEASE_NUMERIC =
     KeyboardC(
         listOf(
             listOf(
                 KeyItemC(
-                    center = KeyC("1", size = LARGE),
+                    center = KeyC("7", size = LARGE),
                     bottomLeft = KeyC("$"),
                     right = KeyC("-"),
                     bottomRight =
@@ -26,7 +27,7 @@ val KB_EN_MESSAGEASE_NUMERIC =
                         },
                 ),
                 KeyItemC(
-                    center = KeyC("2", size = LARGE),
+                    center = KeyC("8", size = LARGE),
                     topLeft = KeyC("`"),
                     top = KeyC("^"),
                     topRight = KeyC("´"),
@@ -36,7 +37,7 @@ val KB_EN_MESSAGEASE_NUMERIC =
                     left = KeyC("+"),
                 ),
                 KeyItemC(
-                    center = KeyC("3", size = LARGE),
+                    center = KeyC("9", size = LARGE),
                     left = KeyC("?"),
                     bottomRight = KeyC("€"),
                     bottomLeft = KeyC("£"),
@@ -69,14 +70,14 @@ val KB_EN_MESSAGEASE_NUMERIC =
             ),
             listOf(
                 KeyItemC(
-                    center = KeyC("7", size = LARGE),
+                    center = KeyC("1", size = LARGE),
                     topLeft = KeyC("~"),
                     left = KeyC("<"),
                     right = KeyC("*"),
                     bottomRight = KeyC("\t", displayText = "⇥"),
                 ),
                 KeyItemC(
-                    center = KeyC("8", size = LARGE),
+                    center = KeyC("2", size = LARGE),
                     topLeft = KeyC("\""),
                     topRight = KeyC("'"),
                     bottomRight = KeyC(":"),
@@ -84,7 +85,7 @@ val KB_EN_MESSAGEASE_NUMERIC =
                     bottomLeft = KeyC(","),
                 ),
                 KeyItemC(
-                    center = KeyC("9", size = LARGE),
+                    center = KeyC("3", size = LARGE),
                     top = KeyC("&"),
                     topRight = KeyC("°"),
                     right = KeyC(">"),

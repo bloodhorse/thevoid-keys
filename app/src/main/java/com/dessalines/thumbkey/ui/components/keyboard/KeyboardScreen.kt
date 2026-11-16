@@ -63,6 +63,10 @@ import com.dessalines.thumbkey.db.DEFAULT_MIN_SWIPE_LENGTH
 import com.dessalines.thumbkey.db.DEFAULT_NON_SQUARE_KEYS
 import com.dessalines.thumbkey.db.DEFAULT_POSITION
 import com.dessalines.thumbkey.db.DEFAULT_FLICK_SIZE
+import com.dessalines.thumbkey.db.DEFAULT_HOLD_TIME
+import com.dessalines.thumbkey.db.DEFAULT_OUTLINE_COLOR
+import com.dessalines.thumbkey.db.DEFAULT_OUTLINE_STRENGTH
+import com.dessalines.thumbkey.db.DEFAULT_SMOOTHING_WINDOW
 import com.dessalines.thumbkey.db.DEFAULT_POSITION_PADDING
 import com.dessalines.thumbkey.db.DEFAULT_PUSHUP_SIZE
 import com.dessalines.thumbkey.db.DEFAULT_SLIDE_BACKSPACE_DEADZONE_ENABLED
@@ -204,6 +208,10 @@ fun KeyboardScreen(
 
     val positionPadding = settings?.positionPadding ?: DEFAULT_POSITION_PADDING
     val flickSize = settings?.flickSize ?: DEFAULT_FLICK_SIZE
+    val holdTime = settings?.holdTime ?: DEFAULT_HOLD_TIME
+    val smoothingWindow = settings?.smoothingWindow ?: DEFAULT_SMOOTHING_WINDOW
+    val outlineColorChoice = settings?.outlineColor ?: DEFAULT_OUTLINE_COLOR
+    val outlineStrength = settings?.outlineStrength ?: DEFAULT_OUTLINE_STRENGTH
 
     val pushupSizeDp = (settings?.pushupSize ?: DEFAULT_PUSHUP_SIZE).dp
     val ignoreBottomPadding = (settings?.ignoreBottomPadding ?: DEFAULT_IGNORE_BOTTOM_PADDING).toBool()
@@ -474,6 +482,10 @@ fun KeyboardScreen(
                                     clockwiseDragAction = clockwiseDragAction,
                                     counterclockwiseDragAction = counterclockwiseDragAction,
                                     slideHoldEnabled = slideHoldEnabled,
+                                    holdTime = holdTime,
+                                    smoothingWindow = smoothingWindow,
+                                    outlineColorChoice = outlineColorChoice,
+                                    outlineStrength = outlineStrength,
                                 )
                             }
                         }
@@ -683,6 +695,10 @@ fun KeyboardScreen(
                                     clockwiseDragAction = clockwiseDragAction,
                                     counterclockwiseDragAction = counterclockwiseDragAction,
                                     slideHoldEnabled = slideHoldEnabled,
+                                    holdTime = holdTime,
+                                    smoothingWindow = smoothingWindow,
+                                    outlineColorChoice = outlineColorChoice,
+                                    outlineStrength = outlineStrength,
                                 )
                             }
                         }
@@ -876,6 +892,10 @@ fun KeyboardScreen(
                         clockwiseDragAction = clockwiseDragAction,
                         counterclockwiseDragAction = counterclockwiseDragAction,
                         slideHoldEnabled = slideHoldEnabled,
+                        holdTime = holdTime,
+                        smoothingWindow = smoothingWindow,
+                        outlineColorChoice = outlineColorChoice,
+                        outlineStrength = outlineStrength,
                         onSketchAction = onSketchAction,
                     )
                 }
@@ -1098,6 +1118,10 @@ fun KeyboardScreen(
                                         clockwiseDragAction = clockwiseDragAction,
                                         counterclockwiseDragAction = counterclockwiseDragAction,
                                         slideHoldEnabled = slideHoldEnabled,
+                                        holdTime = holdTime,
+                                        smoothingWindow = smoothingWindow,
+                                        outlineColorChoice = outlineColorChoice,
+                                        outlineStrength = outlineStrength,
                                     )
                                 }
                             }

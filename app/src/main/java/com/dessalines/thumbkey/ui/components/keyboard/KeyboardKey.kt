@@ -23,6 +23,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -38,15 +39,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalViewConfiguration
+import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import com.dessalines.thumbkey.IMEService
+import com.dessalines.thumbkey.db.DEFAULT_HOLD_TIME
+import com.dessalines.thumbkey.db.DEFAULT_OUTLINE_COLOR
+import com.dessalines.thumbkey.db.DEFAULT_OUTLINE_STRENGTH
+import com.dessalines.thumbkey.db.DEFAULT_SMOOTHING_WINDOW
+import com.dessalines.thumbkey.utils.GestureReader
+import com.dessalines.thumbkey.utils.outlineColor
+import com.dessalines.thumbkey.utils.selectWordAt
 import com.dessalines.thumbkey.utils.CircularDirection
 import com.dessalines.thumbkey.utils.CircularDragAction
 import com.dessalines.thumbkey.utils.Flicklog
@@ -150,6 +161,10 @@ fun KeyboardKey(
     clockwiseDragAction: CircularDragAction,
     counterclockwiseDragAction: CircularDragAction,
     slideHoldEnabled: Boolean,
+    holdTime: Int = DEFAULT_HOLD_TIME,
+    smoothingWindow: Int = DEFAULT_SMOOTHING_WINDOW,
+    outlineColorChoice: Int = DEFAULT_OUTLINE_COLOR,
+    outlineStrength: Int = DEFAULT_OUTLINE_STRENGTH,
     onSketchAction: (action: KeyAction.Sketch) -> Unit = {},
 ) {
     // Necessary for swipe settings to get updated correctly
@@ -159,7 +174,7 @@ fun KeyboardKey(
             slideSensitivity + slideEnabled + slideCursorMovementMode + slideSpacebarDeadzoneEnabled +
             slideBackspaceDeadzoneEnabled + dragReturnEnabled + circularDragEnabled +
             clockwiseDragAction.ordinal + counterclockwiseDragAction.ordinal +
-            slideHoldEnabled
+            slideHoldEnabled + holdTime + smoothingWindow
 
     val ctx = LocalContext.current
     val ime = ctx as IMEService
@@ -191,6 +206,29 @@ fun KeyboardKey(
     val trail = remember { Flicklog.Trail() }
     val density = LocalDensity.current.density
 
+    val readerConfig = remember(density, smoothingWindow) { GestureReader.Config.of(density, smoothingWindow) }
+    var cursorAtDown by remember { mutableIntStateOf(-1) }
+
+    // the whole path from touch-down, which the flick log watches; Thumb-Key's own drag offsets
+    // start only after the touch slop
+    fun readTrail(): GestureReader.Reading {
+        val pts =
+            if (trail.points.size >= 2) {
+                trail.points.map { GestureReader.Pt(it[1].toDouble(), it[2].toDouble()) }
+            } else {
+                listOf(GestureReader.Pt(0.0, 0.0)) + positions.map { GestureReader.Pt(it.x.toDouble(), it.y.toDouble()) }
+            }
+        return GestureReader.read(pts, readerConfig, minSwipeLength.toDouble())
+    }
+
+    // holding a letter types the digit in its slot on the number panel
+    val holdAction =
+        key.longPress ?: run {
+            val c = key.center.action
+            val n = numericKey?.center?.action
+            if (c is KeyAction.CommitText && c.text.length == 1 && c.text[0].isLetter() && n is KeyAction.CommitText) n else null
+        }
+
     fun logTouch(
         action: KeyAction,
         path: String,
@@ -211,7 +249,13 @@ fun KeyboardKey(
             MaterialTheme.colorScheme.inversePrimary
         }
 
-    val keyBorderColour = MaterialTheme.colorScheme.outline
+    val keyBorderColour =
+        outlineColor(
+            MaterialTheme.colorScheme.outline,
+            MaterialTheme.colorScheme.background.luminance() < 0.5f,
+            outlineColorChoice,
+            outlineStrength,
+        )
     val keySize = (keyHeight + keyWidth) / 2.0
     val view = LocalView.current
     val audioManager = ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -444,7 +488,7 @@ fun KeyboardKey(
                     doneKeyAction(scope, action, isDragged, releasedKey, animationHelperSpeed)
                 },
                 onLongClick = {
-                    key.longPress?.let { action ->
+                    holdAction?.let { action ->
                         performKeyAction(
                             action = action,
                             ime = ime,
@@ -481,6 +525,9 @@ fun KeyboardKey(
                 detectDragGestures(
                     onDragStart = {
                         isDragged.value = true
+                        if (key.slideType == SlideType.MOVE_CURSOR) {
+                            cursorAtDown = startSelection(ime).start
+                        }
                     },
                     onDrag = { change, dragAmount ->
                         change.consume()
@@ -654,8 +701,19 @@ fun KeyboardKey(
                         lateinit var action: KeyAction
 
                         val slideHoldTicks = resetSlideHoldVariables()
+                        val circledSpace =
+                            key.slideType == SlideType.MOVE_CURSOR && cursorAtDown >= 0 && !selection.active &&
+                                slideHoldTicks == 0 && readTrail().isCircular
 
-                        if ((key.slideType == SlideType.MOVE_CURSOR || key.slideType == SlideType.DELETE) &&
+                        if (circledSpace) {
+                            // a circle on the space bar selects the word the cursor was in at touch-down;
+                            // the slide may have walked the cursor while the circle was drawn
+                            hasSlideMoveCursorTriggered = false
+                            selectWordAt(ime, cursorAtDown)
+                            action = KeyAction.Noop
+                            logTouch(action, "circle")
+                            doneKeyAction(scope, action, isDragged, releasedKey, animationHelperSpeed)
+                        } else if ((key.slideType == SlideType.MOVE_CURSOR || key.slideType == SlideType.DELETE) &&
                             slideHoldEnabled && slideHoldTicks > 0
                         ) {
                             // The repeat coroutine already handled all movement/deletion; nothing more to do.
@@ -694,7 +752,8 @@ fun KeyboardKey(
                             val maxOffsetBigEnough = maxOffsetDistance >= maxOffsetThreshold
                             action =
                                 (
-                                    if (maxOffsetBigEnough && finalOffsetSmallEnough) {
+                                    (
+                                        if (maxOffsetBigEnough && finalOffsetSmallEnough) {
                                         (
                                             if (circularDragEnabled) {
                                                 val circularDragActions =
@@ -732,14 +791,25 @@ fun KeyboardKey(
                                                 null
                                             }
                                         )
-                                    } else {
+                                        } else {
+                                            null
+                                        }
+                                    )
+                                    // upstream fell to the tap letter here whenever the curl-back test passed
+                                    // and neither drag-return nor circles claimed it
+                                    ?: run {
+                                        val reading = readTrail()
                                         val swipeDirection =
-                                            swipeDirection(
-                                                offsetX,
-                                                offsetY,
-                                                minSwipeLength,
-                                                if (ghostKey == null) key.swipeType else SwipeNWay.EIGHT_WAY,
-                                            )
+                                            if (reading.isTap) {
+                                                null
+                                            } else {
+                                                swipeDirection(
+                                                    reading.dx,
+                                                    reading.dy,
+                                                    0,
+                                                    if (ghostKey == null) key.swipeType else SwipeNWay.EIGHT_WAY,
+                                                )
+                                            }
                                         key.getSwipe(swipeDirection)?.action ?: (
                                             ghostKey?.getSwipe(swipeDirection)?.action
                                         )
@@ -852,6 +922,7 @@ fun KeyboardKey(
 
                         // Reset selection
                         selection = Selection()
+                        cursorAtDown = -1
                     },
                 )
             }
@@ -878,6 +949,15 @@ fun KeyboardKey(
             radiusPercent,
         )
 
+    val baseViewConfiguration = LocalViewConfiguration.current
+    val holdViewConfiguration =
+        remember(baseViewConfiguration, holdTime) {
+            object : ViewConfiguration by baseViewConfiguration {
+                override val longPressTimeoutMillis get() = holdTime.toLong()
+            }
+        }
+
+    CompositionLocalProvider(LocalViewConfiguration provides holdViewConfiguration) {
     Box(
         modifier = keyboardKeyModifier,
     ) {
@@ -993,6 +1073,7 @@ fun KeyboardKey(
 
         // thevoid: no press animation. upstream flashed the key and dropped the typed letter down it;
         // here things appear and vanish, they don't move.
+    }
     }
 }
 

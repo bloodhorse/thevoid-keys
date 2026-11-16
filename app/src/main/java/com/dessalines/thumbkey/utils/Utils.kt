@@ -43,6 +43,7 @@ import com.dessalines.thumbkey.MainActivity
 import com.dessalines.thumbkey.R
 import com.dessalines.thumbkey.db.AppSettingsViewModel
 import com.dessalines.thumbkey.db.DEFAULT_KEYBOARD_LAYOUT
+import com.dessalines.thumbkey.db.DEFAULT_OUTLINE_STRENGTH
 import com.dessalines.thumbkey.db.LayoutsUpdate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -2035,4 +2036,35 @@ fun updateLayouts(
                     .joinToString(),
         ),
     )
+}
+
+// the word around `cursor`: letters and digits either side of it, after putting the cursor back there
+fun selectWordAt(
+    ime: IMEService,
+    cursor: Int,
+) {
+    val ic = ime.currentInputConnection ?: return
+    ic.setSelection(cursor, cursor)
+    val before = ic.getTextBeforeCursor(64, 0) ?: ""
+    val after = ic.getTextAfterCursor(64, 0) ?: ""
+    val back = before.reversed().takeWhile { it.isLetterOrDigit() }.length
+    val forward = after.takeWhile { it.isLetterOrDigit() }.length
+    if (back + forward > 0) ic.setSelection(cursor - back, cursor + forward)
+}
+
+// the key outline: white is the theme's own outline colour, cyan and magenta are thevoid's neon
+fun outlineColor(
+    themeOutline: Color,
+    dark: Boolean,
+    choice: Int,
+    strength: Int,
+): Color {
+    if (choice == 0 && strength == DEFAULT_OUTLINE_STRENGTH) return themeOutline
+    val base =
+        when (choice) {
+            1 -> if (dark) Color(0xFF3EF2FF) else Color(0xFF286983)
+            2 -> if (dark) Color(0xFFFF3EC8) else Color(0xFFB4637A)
+            else -> themeOutline.copy(alpha = 1f)
+        }
+    return base.copy(alpha = strength.coerceIn(0, 100) / 100f)
 }

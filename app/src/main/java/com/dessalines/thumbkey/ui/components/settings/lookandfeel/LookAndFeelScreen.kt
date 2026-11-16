@@ -13,6 +13,7 @@ import androidx.compose.material.icons.outlined.BorderBottom
 import androidx.compose.material.icons.outlined.BorderOuter
 import androidx.compose.material.icons.outlined.Colorize
 import androidx.compose.material.icons.outlined.Crop75
+import androidx.compose.material.icons.outlined.BorderStyle
 import androidx.compose.material.icons.outlined.FormatSize
 import androidx.compose.material.icons.outlined.Fullscreen
 import androidx.compose.material.icons.outlined.HideImage
@@ -60,6 +61,8 @@ import com.dessalines.thumbkey.db.DEFAULT_KEY_HEIGHT
 import com.dessalines.thumbkey.db.DEFAULT_KEY_PADDING
 import com.dessalines.thumbkey.db.DEFAULT_KEY_RADIUS
 import com.dessalines.thumbkey.db.DEFAULT_FLICK_SIZE
+import com.dessalines.thumbkey.db.DEFAULT_OUTLINE_COLOR
+import com.dessalines.thumbkey.db.DEFAULT_OUTLINE_STRENGTH
 import com.dessalines.thumbkey.db.DEFAULT_KEY_WIDTH
 import com.dessalines.thumbkey.db.DEFAULT_NON_SQUARE_KEYS
 import com.dessalines.thumbkey.db.DEFAULT_POSITION
@@ -107,6 +110,9 @@ fun LookAndFeelScreen(
     var keyWidthSliderState by remember { mutableFloatStateOf(keyWidthState) }
     var flickSizeState = (settings?.flickSize ?: DEFAULT_FLICK_SIZE).toFloat()
     var flickSizeSliderState by remember { mutableFloatStateOf(flickSizeState) }
+    var outlineColorState = settings?.outlineColor ?: DEFAULT_OUTLINE_COLOR
+    var outlineStrengthState = (settings?.outlineStrength ?: DEFAULT_OUTLINE_STRENGTH).toFloat()
+    var outlineStrengthSliderState by remember { mutableFloatStateOf(outlineStrengthState) }
 
     var pushupSizeState = (settings?.pushupSize ?: DEFAULT_PUSHUP_SIZE).toFloat()
     var pushupSizeSliderState by remember { mutableFloatStateOf(pushupSizeState) }
@@ -169,6 +175,8 @@ fun LookAndFeelScreen(
                 keyWidth = keyWidthState.toInt(),
                 keyHeight = keyHeightState.toInt(),
                 flickSize = flickSizeState.toInt(),
+                outlineColor = outlineColorState,
+                outlineStrength = outlineStrengthState.toInt(),
                 showToastOnLayoutSwitch = showToastOnLayoutSwitchState.toInt(),
                 disableFullscreenEditor = disableFullscreenEditorState.toInt(),
             ),
@@ -506,6 +514,62 @@ fun LookAndFeelScreen(
                         icon = {
                             Icon(
                                 imageVector = Icons.Outlined.FormatSize,
+                                contentDescription = null,
+                            )
+                        },
+                    )
+
+                    val outlineNames =
+                        listOf(R.string.outline_white, R.string.outline_cyan, R.string.outline_magenta)
+                    ListPreference(
+                        type = ListPreferenceType.DROPDOWN_MENU,
+                        value = outlineColorState,
+                        onValueChange = {
+                            outlineColorState = it
+                            updateLookAndFeel()
+                        },
+                        values = outlineNames.indices.toList(),
+                        valueToText = {
+                            AnnotatedString(resources.getString(outlineNames[it]))
+                        },
+                        title = {
+                            Text(stringResource(R.string.outline_color))
+                        },
+                        summary = {
+                            Text(stringResource(outlineNames[outlineColorState.coerceIn(0, 2)]))
+                        },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Outlined.Palette,
+                                contentDescription = null,
+                            )
+                        },
+                    )
+
+                    // written on every step, so the keyboard below shows it while the thumb is still on the slider
+                    SliderPreference(
+                        value = outlineStrengthState,
+                        sliderValue = outlineStrengthSliderState,
+                        onValueChange = {
+                            outlineStrengthState = it
+                            updateLookAndFeel()
+                        },
+                        onSliderValueChange = {
+                            val changed = it.toInt() != outlineStrengthSliderState.toInt()
+                            outlineStrengthSliderState = it
+                            if (changed) {
+                                outlineStrengthState = it
+                                updateLookAndFeel()
+                            }
+                        },
+                        valueRange = 0f..100f,
+                        valueSteps = 19,
+                        title = {
+                            Text(stringResource(R.string.outline_strength, outlineStrengthSliderState.toInt().toString()))
+                        },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Outlined.BorderStyle,
                                 contentDescription = null,
                             )
                         },

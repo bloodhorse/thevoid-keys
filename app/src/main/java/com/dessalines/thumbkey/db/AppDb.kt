@@ -79,6 +79,10 @@ const val DEFAULT_USE_PRIVATE_CLIPBOARD = 0
 const val DEFAULT_SHOW_ON_SCREEN_KEYBOARD = 0
 const val DEFAULT_SWITCH_IME_MODE = 0
 const val DEFAULT_FLICK_SIZE = 85
+const val DEFAULT_HOLD_TIME = 700
+const val DEFAULT_SMOOTHING_WINDOW = 5
+const val DEFAULT_OUTLINE_COLOR = 0
+const val DEFAULT_OUTLINE_STRENGTH = 13
 
 @Entity
 data class AppSettings(
@@ -361,6 +365,26 @@ data class AppSettings(
         defaultValue = DEFAULT_FLICK_SIZE.toString(),
     )
     val flickSize: Int = DEFAULT_FLICK_SIZE,
+    @ColumnInfo(
+        name = "hold_time",
+        defaultValue = DEFAULT_HOLD_TIME.toString(),
+    )
+    val holdTime: Int = DEFAULT_HOLD_TIME,
+    @ColumnInfo(
+        name = "smoothing_window",
+        defaultValue = DEFAULT_SMOOTHING_WINDOW.toString(),
+    )
+    val smoothingWindow: Int = DEFAULT_SMOOTHING_WINDOW,
+    @ColumnInfo(
+        name = "outline_color",
+        defaultValue = DEFAULT_OUTLINE_COLOR.toString(),
+    )
+    val outlineColor: Int = DEFAULT_OUTLINE_COLOR,
+    @ColumnInfo(
+        name = "outline_strength",
+        defaultValue = DEFAULT_OUTLINE_STRENGTH.toString(),
+    )
+    val outlineStrength: Int = DEFAULT_OUTLINE_STRENGTH,
 )
 
 data class LayoutsUpdate(
@@ -473,6 +497,10 @@ data class LookAndFeelUpdate(
         name = "flick_size",
     )
     val flickSize: Int,
+    @ColumnInfo(name = "outline_color")
+    val outlineColor: Int,
+    @ColumnInfo(name = "outline_strength")
+    val outlineStrength: Int,
 )
 
 data class BehaviorUpdate(
@@ -509,6 +537,10 @@ data class BehaviorUpdate(
     val slideHoldEnabled: Int,
     @ColumnInfo(name = "switch_ime_mode")
     val switchImeMode: Int = DEFAULT_SWITCH_IME_MODE,
+    @ColumnInfo(name = "hold_time")
+    val holdTime: Int,
+    @ColumnInfo(name = "smoothing_window")
+    val smoothingWindow: Int,
 )
 
 data class KeyModificationsUpdate(
@@ -646,7 +678,7 @@ class AppSettingsRepository(
 }
 
 @Database(
-    version = 30,
+    version = 31,
     entities = [AppSettings::class],
     exportSchema = true,
 )
@@ -698,6 +730,7 @@ abstract class AppDB : RoomDatabase() {
                             MIGRATION_27_28,
                             MIGRATION_28_29,
                             MIGRATION_29_30,
+                            MIGRATION_30_31,
                         )
                         // Necessary because it can't insert data on creation
                         .addCallback(
@@ -711,6 +744,8 @@ abstract class AppDB : RoomDatabase() {
                                             CONFLICT_IGNORE,
                                             ContentValues(2).apply {
                                                 put("id", 1)
+                                                // the column's default stays upstream's 0, Room checks it after a migration
+                                                put("slide_enabled", 1)
                                                 put(
                                                     "show_on_screen_keyboard",
                                                     if (BuildConfig.DEBUG) 1 else DEFAULT_SHOW_ON_SCREEN_KEYBOARD,

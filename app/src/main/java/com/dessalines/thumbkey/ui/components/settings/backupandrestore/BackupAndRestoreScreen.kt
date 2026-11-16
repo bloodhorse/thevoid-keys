@@ -66,6 +66,10 @@ import com.dessalines.thumbkey.db.DEFAULT_MIN_SWIPE_LENGTH
 import com.dessalines.thumbkey.db.DEFAULT_NON_SQUARE_KEYS
 import com.dessalines.thumbkey.db.DEFAULT_POSITION
 import com.dessalines.thumbkey.db.DEFAULT_FLICK_SIZE
+import com.dessalines.thumbkey.db.DEFAULT_HOLD_TIME
+import com.dessalines.thumbkey.db.DEFAULT_OUTLINE_COLOR
+import com.dessalines.thumbkey.db.DEFAULT_OUTLINE_STRENGTH
+import com.dessalines.thumbkey.db.DEFAULT_SMOOTHING_WINDOW
 import com.dessalines.thumbkey.db.DEFAULT_POSITION_PADDING
 import com.dessalines.thumbkey.db.DEFAULT_PUSHUP_SIZE
 import com.dessalines.thumbkey.db.DEFAULT_SHOW_ON_SCREEN_KEYBOARD
@@ -320,6 +324,10 @@ private fun resetAppSettingsToDefault(appSettingsViewModel: AppSettingsViewModel
             slideHoldEnabled = DEFAULT_SLIDE_HOLD_ENABLED,
             switchImeMode = DEFAULT_SWITCH_IME_MODE,
             flickSize = DEFAULT_FLICK_SIZE,
+            holdTime = DEFAULT_HOLD_TIME,
+            smoothingWindow = DEFAULT_SMOOTHING_WINDOW,
+            outlineColor = DEFAULT_OUTLINE_COLOR,
+            outlineStrength = DEFAULT_OUTLINE_STRENGTH,
         ),
     )
 }

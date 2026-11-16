@@ -329,3 +329,13 @@ val MIGRATION_29_30 =
             )
         }
     }
+
+val MIGRATION_30_31 =
+    object : Migration(30, 31) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE AppSettings ADD COLUMN hold_time INTEGER NOT NULL DEFAULT $DEFAULT_HOLD_TIME")
+            db.execSQL("ALTER TABLE AppSettings ADD COLUMN smoothing_window INTEGER NOT NULL DEFAULT $DEFAULT_SMOOTHING_WINDOW")
+            db.execSQL("ALTER TABLE AppSettings ADD COLUMN outline_color INTEGER NOT NULL DEFAULT $DEFAULT_OUTLINE_COLOR")
+            db.execSQL("ALTER TABLE AppSettings ADD COLUMN outline_strength INTEGER NOT NULL DEFAULT $DEFAULT_OUTLINE_STRENGTH")
+        }
+    }

@@ -17,7 +17,9 @@ import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material.icons.outlined.Keyboard
 import androidx.compose.material.icons.outlined.SpaceBar
 import androidx.compose.material.icons.outlined.SwapHoriz
+import androidx.compose.material.icons.outlined.Gesture
 import androidx.compose.material.icons.outlined.Swipe
+import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material.icons.outlined.SwipeRight
 import androidx.compose.material.icons.outlined.UTurnRight
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -47,7 +49,9 @@ import com.dessalines.thumbkey.db.DEFAULT_CLOCKWISE_DRAG_ACTION
 import com.dessalines.thumbkey.db.DEFAULT_COUNTERCLOCKWISE_DRAG_ACTION
 import com.dessalines.thumbkey.db.DEFAULT_DRAG_RETURN_ENABLED
 import com.dessalines.thumbkey.db.DEFAULT_GHOST_KEYS_ENABLED
+import com.dessalines.thumbkey.db.DEFAULT_HOLD_TIME
 import com.dessalines.thumbkey.db.DEFAULT_MIN_SWIPE_LENGTH
+import com.dessalines.thumbkey.db.DEFAULT_SMOOTHING_WINDOW
 import com.dessalines.thumbkey.db.DEFAULT_SLIDE_BACKSPACE_DEADZONE_ENABLED
 import com.dessalines.thumbkey.db.DEFAULT_SLIDE_CURSOR_MOVEMENT_MODE
 import com.dessalines.thumbkey.db.DEFAULT_SLIDE_ENABLED
@@ -84,6 +88,11 @@ fun BehaviorScreen(
 
     var minSwipeLengthState = (settings?.minSwipeLength ?: DEFAULT_MIN_SWIPE_LENGTH).toFloat()
     var minSwipeLengthSliderState by remember { mutableFloatStateOf(minSwipeLengthState) }
+
+    var holdTimeState = (settings?.holdTime ?: DEFAULT_HOLD_TIME).toFloat()
+    var holdTimeSliderState by remember { mutableFloatStateOf(holdTimeState) }
+    var smoothingWindowState = (settings?.smoothingWindow ?: DEFAULT_SMOOTHING_WINDOW).toFloat()
+    var smoothingWindowSliderState by remember { mutableFloatStateOf(smoothingWindowState) }
 
     var slideSensitivityState = (settings?.slideSensitivity ?: DEFAULT_SLIDE_SENSITIVITY).toFloat()
     var slideSensitivitySliderState by remember { mutableFloatStateOf(slideSensitivityState) }
@@ -134,6 +143,8 @@ fun BehaviorScreen(
                 ghostKeysEnabled = ghostKeysEnabledState.toInt(),
                 slideHoldEnabled = slideHoldEnabledState.toInt(),
                 switchImeMode = switchImeModeState.ordinal,
+                holdTime = holdTimeState.toInt(),
+                smoothingWindow = smoothingWindowState.toInt(),
             ),
         )
     }
@@ -227,6 +238,52 @@ fun BehaviorScreen(
                         icon = {
                             Icon(
                                 imageVector = Icons.Outlined.Swipe,
+                                contentDescription = null,
+                            )
+                        },
+                    )
+                    SliderPreference(
+                        value = holdTimeState,
+                        sliderValue = holdTimeSliderState,
+                        onValueChange = {
+                            holdTimeState = it
+                            updateBehavior()
+                        },
+                        onSliderValueChange = { holdTimeSliderState = it },
+                        valueRange = 300f..1500f,
+                        valueSteps = 23,
+                        title = {
+                            Text(stringResource(R.string.hold_time, holdTimeSliderState.toInt().toString()))
+                        },
+                        summary = {
+                            Text(stringResource(R.string.hold_time_description))
+                        },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Outlined.Timer,
+                                contentDescription = null,
+                            )
+                        },
+                    )
+                    SliderPreference(
+                        value = smoothingWindowState,
+                        sliderValue = smoothingWindowSliderState,
+                        onValueChange = {
+                            smoothingWindowState = it
+                            updateBehavior()
+                        },
+                        onSliderValueChange = { smoothingWindowSliderState = it },
+                        valueRange = 3f..11f,
+                        valueSteps = 3,
+                        title = {
+                            Text(stringResource(R.string.smoothing_window, smoothingWindowSliderState.toInt().toString()))
+                        },
+                        summary = {
+                            Text(stringResource(R.string.smoothing_window_description))
+                        },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Outlined.Gesture,
                                 contentDescription = null,
                             )
                         },
