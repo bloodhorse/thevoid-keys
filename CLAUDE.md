@@ -18,14 +18,44 @@ mostly defaults and a handful of settings; a user can still pick any upstream th
   line from touch-down to lift-off; this takes the whole path the flick log already watches (`Flicklog.Trail`,
   px from touch-down), drops jitter under 3 dp and teleports over 50 dp (with Wurstfinger's velocity cone so a
   fast fling survives), smooths it (Savitzky–Golay, window from the setting), and reads **tap if the furthest
-  point is under `min_swipe_length`, otherwise the direction of the furthest point**, mapped through Thumb-Key's
-  own `swipeDirection` so the slices and `SwipeNWay` stay theirs. no aspect-ratio step: his keys are square.
+  point is under `min_swipe_length`, otherwise the direction of the furthest point**, cut by the key's slices
+  (`utils/Slices.kt`, below). no aspect-ratio step: his keys are square.
   `onDragEnd`'s plain-flick branch calls it; drag-return and circular drag still use upstream's code. two
   things this fixed besides the arc: Thumb-Key's drag offsets start only after Compose's touch slop (8 dp, 21 px
   on his phone), so "60 px" really needed ~81; and when the curl-back test passed with drag-return and circles
   both off, upstream typed the tap letter. his phone's line is 32 px (~12 dp, kept by grant.sh): his taps move 0 dp,
   his short flicks 16–24 dp, and the smoothing shaves 0–7 px off his real drags, never across 32. JVM tests: `./gradlew testDebugUnitTest` (`GestureReaderTest`,
-  Wurstfinger's pins plus arcs at his phone's numbers).
+  Wurstfinger's pins plus arcs at his phone's numbers; `WordPickTest`, the slices, the word both ways, a clear
+  flick untouched, a password field never asking).
+- **unequal slices** (`utils/Slices.kt`): an eight-way key is cut into 60° straights and 30° diagonals, and a
+  diagonal holding nothing on that key gives half to each straight beside it (on his layout 15, `e`'s empty
+  up-left makes `w` run to 225°). an empty straight stays where it is and types the tap letter, as upstream.
+  four- and two-way keys keep upstream's equal cuts; `swipeType` decides, a ghost key makes a key eight-way.
+  only the plain-flick branch and the tick read these; drag-return and circular drag still use upstream's
+  `swipeDirection`. on 15 only `o` and `e` are eight-way.
+- **the word decides the borderline flicks** (`utils/WordPick.kt`, `utils/CharModel.kt`): two lines a flick
+  can land near, the edge between two slices (`ANGLE_BAND_DEG` 10 either side) and `min_swipe_length` between
+  a flick and the tap (`TRAVEL_BAND_DP` 8 either side). inside a band geometry's weight for its own side runs
+  from 0.5 on the line to 1 at the rim, the other side gets the rest, and each side's weight times
+  P(letter | the word so far)^`WORD_WEIGHT` (1) decides; a strict win, so a word with no opinion never moves
+  anything. the angle pair is settled first, then flick against tap, so there are never three-way fights.
+  only a letter against a letter: if either side is a symbol, space, digit or action, geometry stands. an
+  empty slice counts as the tap letter, which is how `v` against `a` gets in: a flick toward `v` that goes
+  flat lands in `a`'s empty up-right quadrant. the model is asked only when a pair turns up; the context is
+  `getTextBeforeCursor(8)`, cut at the last non-letter, the last three letters lowercased, kept nowhere. a
+  password field (checked fresh each flick) gets geometry alone. a Compose tap (under the 8 dp slop) never
+  reaches the reader, so the band's lower half only exists from 8 dp; his taps move 0 dp anyway.
+  the model is `app/src/main/assets/charlm.bin` (239 KB): English character 4-grams inside a word, backing off
+  to 3-grams, from Peter Norvig's `count_1w.txt` (the 333k commonest words of Google's trillion-word web
+  corpus, with counts), each order mixed 2% with the one below, quantized to 1/8 bit. `python3
+  tools/charlm.py` rebuilds it (downloads the list to `~/.cache` once); the format is in its docstring.
+  the bands are the brief's starting points: his log was 24 lines under the old 60 px line when they were
+  set, nothing to fit them to. every decision lands in the flick log; tune them from `flicks.py`'s "the word".
+- **a tick per slice** (`sliceTickStep` in `KeyboardKey.kt`): on a key without a slide, once the furthest
+  point of the raw path is past `min_swipe_length`, each move of it into a different slice that holds
+  something gives `SEGMENT_FREQUENT_TICK` (API 34+, `CLOCK_TICK` below), when vibrate on tap is on. no tick
+  for the first slice it arms in, none for an empty one. it reads the raw path, the reader the smoothed one,
+  and the word can still override the slice he felt inside a band. logcat `slice tick:`.
 - **hold for a digit**: holding a letter still types the digit in its slot on the number panel
   (`numericKey`, the same `[i][j]` of `modes.numeric`); a key's own `longPress` wins. the timeout is a setting
   (Behavior → "Hold for a digit", 300–1500 ms, default 700), fed to `combinedClickable` through a
@@ -109,10 +139,15 @@ mostly defaults and a handful of settings; a user can still pick any upstream th
   `doneKeyAction` in `KeyboardKey`) appends one json line to `files/flicks.jsonl`: the key, what it typed,
   which path decided it (`tap` is Compose's click, under touch slop; `drag` is the flick reader; `long` a
   hold; `circle` a word selected on the space bar), the points
-  in px with density. password fields are never written. 8 MB, then it rolls to `flicks.old.jsonl`.
+  in px with density, and `word` when the word was asked: geometry's pick, the final pick, and per pair
+  (`kind` angle/travel) both candidates, geometry's weight `w`, `p_geo`/`p_alt`, the scores, the pick.
+  password fields are never written (`isPasswordField` checks the input class: upstream masked the
+  variation alone, so every URL bar, `0x10` like a number password, counted as a password field). 8 MB, then it rolls to `flicks.old.jsonl`.
   `python3 tools/flicks.py` pulls it and reports: travel histograms for taps and flicks, the misfires he
   corrected (a touch, backspace within 2.5s, the same key again with a different result), and which
-  distance-and-speed rule would rescue the missed flicks without breaking honest taps. `--tail N` lists touches.
+  distance-and-speed rule would rescue the missed flicks without breaking honest taps, and "the word": how
+  often it was asked, how often it overrode geometry, and how often each was followed by his correction
+  (backspace, then the same key again). `--tail N` lists touches. its direction labels use the 60/30 cut.
 
 ## build and install
 
@@ -135,6 +170,17 @@ a loud gradient and big sharp text that stays put under the keyboard (`adjustNot
 `grey.png` over `#21272B`, `grey-backdrop.png` the same with backdrop on, `black.png` over black.
 
 ## gotchas
+
+- **the frost app is the test field**: `am start -n com.bekh.frosttest/.Main --ez black true`, tap `540 265`
+  for its `EditText`. with backdrop off his keys are 232 px squares, columns x 192/424/656/885, rows y
+  1493/1723/1952/2181 (o at 424,1723). two spaces in a row are ". " (`ReplaceLastText`). a flick by script is
+  `input motionevent DOWN`, a few `MOVE`s along the line, `UP`, all in one `adb shell`: floats are fine.
+  back up `files/flicks.jsonl` first, put it back after (`adb exec-in run-as … sh -c 'cat > files/flicks.jsonl'`).
+- **every angle the old 45° slices read as a diagonal and the new ones as a straight is within 7.5° of a new
+  edge**, so inside the word's band: 12 can't be shown on the phone without 11 asking. `word.geo` in the
+  flick log is geometry's pick on the new slices.
+- **the real layouts don't load in JVM tests** (`ENMessagEase.kt` touches Android resources in its static
+  init); `WordPickTest` builds `a`, `o`, `e` by hand, copied off layout 15.
 
 - **wake his phone before any adb on it, installs included**: `adb -s 100.96.66.79:5555 shell input keyevent
   KEYCODE_WAKEUP`. an install landing while it dozes ends doze without a wake, and his tap-to-wake stays dead

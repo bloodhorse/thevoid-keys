@@ -70,6 +70,7 @@ object Flicklog {
         keyH: Float,
         minSwipeLength: Int,
         password: Boolean,
+        pick: WordPick.Result? = null,
     ) {
         if (password || trail.written || trail.points.isEmpty()) return
         trail.written = true
@@ -85,6 +86,27 @@ object Flicklog {
                 append(",\"kw\":").append(keyW)
                 append(",\"kh\":").append(keyH)
                 append(",\"min\":").append(minSwipeLength)
+                if (pick != null && pick.steps.isNotEmpty()) {
+                    // every pair the word was asked about: both candidates, geometry's weight, the
+                    // word's probabilities, the scores, what it picked; then geometry's and the final pick
+                    append(",\"word\":{\"geo\":").append(q(name(pick.geo)))
+                    append(",\"pick\":").append(q(name(pick.action)))
+                    append(",\"steps\":[")
+                    pick.steps.forEachIndexed { i, st ->
+                        if (i > 0) append(',')
+                        append("{\"kind\":").append(q(st.kind))
+                        append(",\"geo\":").append(q(name(st.geo)))
+                        append(",\"alt\":").append(q(name(st.alt)))
+                        append(",\"w\":").append(r4(st.w))
+                        append(",\"p_geo\":").append(r4(st.pGeo))
+                        append(",\"p_alt\":").append(r4(st.pAlt))
+                        append(",\"s_geo\":").append(r4(st.sGeo))
+                        append(",\"s_alt\":").append(r4(st.sAlt))
+                        append(",\"pick\":").append(q(name(st.pick)))
+                        append('}')
+                    }
+                    append("]}")
+                }
                 append(",\"pts\":[")
                 pts.forEachIndexed { i, p ->
                     if (i > 0) append(',')
@@ -109,6 +131,8 @@ object Flicklog {
             is KeyAction.SendEvent -> KeyEvent.keyCodeToString(action.event.keyCode)
             else -> action::class.simpleName ?: "?"
         }
+
+    private fun r4(x: Double) = String.format(java.util.Locale.ROOT, "%.4g", x)
 
     private fun q(s: String): String {
         val b = StringBuilder("\"")

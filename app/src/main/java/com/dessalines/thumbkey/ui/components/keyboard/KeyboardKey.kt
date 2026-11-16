@@ -55,7 +55,10 @@ import com.dessalines.thumbkey.db.DEFAULT_HOLD_TIME
 import com.dessalines.thumbkey.db.DEFAULT_OUTLINE_COLOR
 import com.dessalines.thumbkey.db.DEFAULT_OUTLINE_STRENGTH
 import com.dessalines.thumbkey.db.DEFAULT_SMOOTHING_WINDOW
+import com.dessalines.thumbkey.utils.CharModel
 import com.dessalines.thumbkey.utils.GestureReader
+import com.dessalines.thumbkey.utils.Slices
+import com.dessalines.thumbkey.utils.WordPick
 import com.dessalines.thumbkey.utils.outlineColor
 import com.dessalines.thumbkey.utils.selectWordAt
 import com.dessalines.thumbkey.utils.CircularDirection
@@ -241,6 +244,21 @@ fun KeyboardKey(
         return GestureReader.read(pts, readerConfig, minSwipeLength.toDouble())
     }
 
+    // the key's circle cut into directions (utils/Slices.kt); a ghost key makes every key eight-way
+    val arcs =
+        remember(key, ghostKey) {
+            Slices.arcs(if (ghostKey == null) key.swipeType else SwipeNWay.EIGHT_WAY) {
+                key.getSwipe(it) != null || ghostKey?.getSwipe(it) != null
+            }
+        }
+
+    fun resolveSwipe(dir: SwipeDirection?): KeyAction = key.getSwipe(dir)?.action ?: ghostKey?.getSwipe(dir)?.action ?: key.center.action
+
+    fun passwordNow() = com.dessalines.thumbkey.utils.isPasswordField(ime)
+
+    val lastPick = remember { arrayOfNulls<WordPick.Result>(1) }
+
+
     val repeatsDelete = key.slideType == SlideType.DELETE
     var deleteLive by remember { mutableStateOf(false) }
     var deleteResidual by remember { mutableFloatStateOf(0f) }
@@ -260,7 +278,8 @@ fun KeyboardKey(
     fun logTouch(
         action: KeyAction,
         path: String,
-    ) = Flicklog.write(ctx, trail, key, action, path, density, keyWidth, keyHeight, minSwipeLength, isPasswordField)
+        pick: WordPick.Result? = null,
+    ) = Flicklog.write(ctx, trail, key, action, path, density, keyWidth, keyHeight, minSwipeLength, isPasswordField || passwordNow(), pick)
 
     var selection by remember { mutableStateOf(Selection()) }
 
@@ -299,6 +318,36 @@ fun KeyboardKey(
             // Compatible with API 24, but vibration will not distinguish between tap and slide
             HapticFeedbackConstants.KEYBOARD_TAP
         }
+
+    // a light tick each time the furthest point of a flick, past the line, moves into another slice
+    // that holds something (none at touch-down, none for an empty slice)
+    val sliceTick =
+        if (Build.VERSION.SDK_INT >= 34) HapticFeedbackConstants.SEGMENT_FREQUENT_TICK else HapticFeedbackConstants.CLOCK_TICK
+    var tickScanned by remember { mutableIntStateOf(0) }
+    var tickFar by remember { mutableFloatStateOf(0f) }
+    var tickFarX by remember { mutableFloatStateOf(0f) }
+    var tickFarY by remember { mutableFloatStateOf(0f) }
+    var tickSlice by remember { mutableStateOf<SwipeDirection?>(null) }
+
+    fun sliceTickStep() {
+        val pts = trail.points
+        while (tickScanned < pts.size) {
+            val p = pts[tickScanned++]
+            val d = p[1] * p[1] + p[2] * p[2]
+            if (d > tickFar) {
+                tickFar = d
+                tickFarX = p[1]
+                tickFarY = p[2]
+            }
+        }
+        if (tickFar <= minSwipeLength.toFloat() * minSwipeLength) return
+        val dir = Slices.read(arcs, Slices.angleOf(tickFarX, tickFarY))
+        val was = tickSlice
+        tickSlice = dir
+        if (was == null || was == dir || resolveSwipe(dir) == resolveSwipe(null)) return
+        val felt = vibrateOnTap && view.performHapticFeedback(sliceTick)
+        Log.d(TAG, "slice tick: $was -> $dir, haptic $felt")
+    }
 
     LaunchedEffect(key1 = isPressed) {
         if (isPressed) {
@@ -650,6 +699,10 @@ fun KeyboardKey(
                         deleteEaten.setLength(0)
                         deleteTicks = 0
                         isDragged.value = true
+                        lastPick[0] = null
+                        tickScanned = 0
+                        tickFar = 0f
+                        tickSlice = null
                         if (key.slideType == SlideType.MOVE_CURSOR) {
                             cursorAtDown = startSelection(ime).start
                         }
@@ -663,6 +716,7 @@ fun KeyboardKey(
                         val offset = Offset(offsetX, offsetY)
                         positions += offset
                         if (offset.getDistanceSquared() > maxOffset.getDistanceSquared()) maxOffset = offset
+                        if (key.slideType == SlideType.NONE) sliceTickStep()
 
                         // First detection is large enough to preserve swipe actions.
                         val slideOffsetTrigger = (keySize.dp.toPx() * 0.75) + minSwipeLength
@@ -903,21 +957,40 @@ fun KeyboardKey(
                                     // upstream fell to the tap letter here whenever the curl-back test passed
                                     // and neither drag-return nor circles claimed it
                                     ?: run {
+                                        // the reader's furthest point, cut by the key's slices; near a line
+                                        // between two letters the word so far decides (utils/WordPick.kt)
                                         val reading = readTrail()
-                                        val swipeDirection =
-                                            if (reading.isTap) {
-                                                null
-                                            } else {
-                                                swipeDirection(
-                                                    reading.dx,
-                                                    reading.dy,
-                                                    0,
-                                                    if (ghostKey == null) key.swipeType else SwipeNWay.EIGHT_WAY,
-                                                )
-                                            }
-                                        key.getSwipe(swipeDirection)?.action ?: (
-                                            ghostKey?.getSwipe(swipeDirection)?.action
-                                        )
+                                        val pick =
+                                            WordPick.decide(
+                                                travel = reading.maxDisplacement,
+                                                angle = Slices.angleOf(reading.dx, reading.dy),
+                                                minSwipe = minSwipeLength.toDouble(),
+                                                density = density,
+                                                arcs = arcs,
+                                                resolve = ::resolveSwipe,
+                                                model = { CharModel.get(ctx) },
+                                                context = {
+                                                    if (passwordNow()) {
+                                                        null
+                                                    } else {
+                                                        ime.currentInputConnection
+                                                            ?.getTextBeforeCursor(8, 0)
+                                                            ?.let { CharModel.contextOf(it) }
+                                                    }
+                                                },
+                                            )
+                                        if (pick.steps.isNotEmpty()) {
+                                            Log.d(
+                                                TAG,
+                                                "word pick: geo ${WordPick.letterOf(pick.geo)} -> ${WordPick.letterOf(pick.action)}, " +
+                                                    pick.steps.joinToString { st ->
+                                                        "${st.kind} ${WordPick.letterOf(st.geo)}|${WordPick.letterOf(st.alt)} " +
+                                                            "w=${"%.2f".format(st.w)} p=${"%.4f".format(st.pGeo)}/${"%.4f".format(st.pAlt)}"
+                                                    },
+                                            )
+                                        }
+                                        lastPick[0] = pick
+                                        pick.action
                                     }
                                 ) ?: key.center.action
 
@@ -941,7 +1014,7 @@ fun KeyboardKey(
                                 onKeyEvent = onKeyEvent,
                                 onSketchAction = onSketchAction,
                             )
-                            logTouch(action, "drag")
+                            logTouch(action, "drag", lastPick[0])
                             doneKeyAction(
                                 scope,
                                 action,

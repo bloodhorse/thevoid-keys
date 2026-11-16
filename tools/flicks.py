@@ -34,6 +34,16 @@ def default_serial():
     return ids[0] if ids else None
 
 
+def direction(ang):
+    # the keyboard's cut (utils/Slices.kt): 60° straights, 30° diagonals; a diagonal empty on the key
+    # folds into its straights there, which this label doesn't know about
+    k = round(ang / 45) % 8
+    off = abs((ang - k * 45 + 180) % 360 - 180)
+    if k % 2 == 1 and off > 15:
+        k = (k - 1) % 8 if (ang - k * 45 + 180) % 360 - 180 < 0 else (k + 1) % 8
+    return DIRS[k]
+
+
 def shape(r):
     d = r["dp"]
     pts = [(t, x / d, y / d) for t, x, y in r["pts"]]
@@ -52,7 +62,7 @@ def shape(r):
     r["end"] = math.hypot(end[1], end[2])
     r["speed"] = speed * 1000
     r["dur"] = end[0]
-    r["dir"] = DIRS[int(((ang + 22.5) % 360) // 45)] if travel > 0.5 else "-"
+    r["dir"] = direction(ang) if travel > 0.5 else "-"
     r["ang"] = ang
     r["min_dp"] = r["min"] / d
     r["flick"] = r["out"] != r["key"]
@@ -71,6 +81,35 @@ def misfires(rs):
                 "flick, meant tap" if a["flick"] and not c["flick"] else "wrong direction")
         found.append((kind, a, c))
     return found
+
+
+def corrected(rs, i):
+    """the touch at i was followed by a backspace and a different result on the same key."""
+    if i + 2 >= len(rs):
+        return False
+    a, b, c = rs[i], rs[i + 1], rs[i + 2]
+    return b["out"] == DEL and c["key"] == a["key"] and c["out"] != a["out"] and c["t"] - a["t"] <= FIX_WINDOW_MS
+
+
+def word(rs):
+    """the flicks the word was asked about (utils/WordPick.kt), and whether he undid them."""
+    asked = [i for i, r in enumerate(rs) if "word" in r]
+    print(f"\nthe word was asked {len(asked)} times")
+    if not asked:
+        return
+    over = [i for i in asked if rs[i]["word"]["pick"] != rs[i]["word"]["geo"]]
+    kept = [i for i in asked if i not in over]
+    fo = sum(corrected(rs, i) for i in over)
+    fk = sum(corrected(rs, i) for i in kept)
+    print(f"  overrode geometry  {len(over):>4}, then he corrected it {fo} times")
+    print(f"  kept geometry      {len(kept):>4}, then he corrected it {fk} times")
+    kinds = Counter(st["kind"] for i in asked for st in rs[i]["word"]["steps"])
+    print("  pairs: " + ", ".join(f"{n} {k}" for k, n in kinds.most_common()))
+    for i in over[-10:]:
+        w = rs[i]["word"]
+        st = "; ".join(f"{x['kind']} {x['geo']}|{x['alt']} w={x['w']} p={x['p_geo']}/{x['p_alt']}" for x in w["steps"])
+        mark = "  <- corrected" if corrected(rs, i) else ""
+        print(f"    {rs[i]['key']}: geometry {w['geo']!r}, word {w['pick']!r}  ({st}){mark}")
 
 
 def line(r):
@@ -122,6 +161,8 @@ def main():
     for kind, a, c in m[-15:]:
         print(f"  {kind:<17} got  {line(a)}")
         print(f"  {'':<17} meant {c['out']!r}, his redo went {c['travel']:.0f}dp {c['dir']}")
+
+    word(rs)
 
     missed = [a for k, a, _ in m if k == "tap, meant flick"]
     if missed and taps:
