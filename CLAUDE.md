@@ -171,6 +171,15 @@ a loud gradient and big sharp text that stays put under the keyboard (`adjustNot
 
 ## gotchas
 
+- **the input connection is null after a rotation**: on a configuration change android re-runs `doStartInput`
+  with whatever connection it holds, and the rotating app has already unbound its old one, so `onStartInput`
+  gets none. `onStartInput` rebuilds the view, its first composition runs right there, and upstream's bare
+  `ctx.currentInputConnection.requestCursorUpdates` in `KeyboardScreen` crashed on the null (four times on his
+  phone on the 17th). `IMEService.getCurrentInputConnection()` is typed non-null but passes the framework's null
+  through unchecked, so the compiler never warns: anything that can run with no field bound goes through
+  `inputConnectionOrNull` / `appInputConnection` (both nullable). cursor updates go through
+  `IMEService.requestCursorUpdates`, which remembers a request that found no connection and asks again in
+  `onStartInputView`. upstream (5.1.22) still has the bare calls.
 - **the frost app is the test field**: `am start -n com.bekh.frosttest/.Main --ez black true`, tap `540 265`
   for its `EditText`. with backdrop off his keys are 232 px squares, columns x 192/424/656/885, rows y
   1493/1723/1952/2181 (o at 424,1723). two spaces in a row are ". " (`ReplaceLastText`). a flick by script is

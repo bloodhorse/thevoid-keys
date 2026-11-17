@@ -275,7 +275,7 @@ fun KeyboardScreen(
             }
         val keyboardHeight = Dp((keyHeight * controllerKeys.size) - (keyPadding * 2))
 
-        ctx.currentInputConnection.requestCursorUpdates(0)
+        ctx.requestCursorUpdates(0)
 
         Box(
             modifier =
@@ -335,7 +335,7 @@ fun KeyboardScreen(
                                     if (soundOnTap) {
                                         audioManager.playSoundEffect(AudioManager.FX_KEY_CLICK, .1f)
                                     }
-                                    ctx.currentInputConnection.commitText(it.emoji, 1)
+                                    ctx.inputConnectionOrNull?.commitText(it.emoji, 1)
                                 }
                                 emojiPicker
                             },
@@ -537,7 +537,7 @@ fun KeyboardScreen(
                                     if (soundOnTap) {
                                         audioManager.playSoundEffect(AudioManager.FX_KEY_CLICK, .1f)
                                     }
-                                    ctx.currentInputConnection.commitText(
+                                    ctx.inputConnectionOrNull?.commitText(
                                         it.emoji,
                                         1,
                                     )
@@ -756,12 +756,12 @@ fun KeyboardScreen(
                     isEnabled = clipboardHistoryEnabled,
                     onItemClick = { item ->
                         // Paste and return to keyboard
-                        ctx.currentInputConnection.commitText(item.text, 1)
+                        ctx.inputConnectionOrNull?.commitText(item.text, 1)
                         mode = KeyboardMode.MAIN
                     },
                     onItemPaste = { item ->
                         // Paste WITHOUT returning to keyboard
-                        ctx.currentInputConnection.commitText(item.text, 1)
+                        ctx.inputConnectionOrNull?.commitText(item.text, 1)
                     },
                     onItemDelete = { item ->
                         scope.launch {
@@ -833,7 +833,7 @@ fun KeyboardScreen(
                         // Straight to the text field: the layout's text processor and
                         // auto-capitalization don't apply to a drawn character.
                         ctx.ignoreNextCursorMove()
-                        ctx.appInputConnection.commitText(text, 1)
+                        ctx.appInputConnection?.commitText(text, 1)
                     },
                     onSearch = {
                         sketch.searching = true
@@ -906,7 +906,7 @@ fun KeyboardScreen(
         // non-compose textfields.
         // This also requires jetpack compose >= 1.6
         // See https://github.com/dessalines/thumb-key/issues/242
-        if (ctx.currentInputConnection.requestCursorUpdates(CURSOR_UPDATE_MONITOR)) {
+        if (ctx.requestCursorUpdates(CURSOR_UPDATE_MONITOR)) {
             Log.d(TAG, "request for cursor updates succeeded, cursor updates will be provided")
         } else {
             Log.d(TAG, "request for cursor updates failed, cursor updates will not be provided")
@@ -1154,7 +1154,7 @@ fun KeyboardScreen(
                         sketch.list = null
                         ctx.setInputRedirect(null)
                         ctx.ignoreNextCursorMove()
-                        ctx.appInputConnection.commitText(text, 1)
+                        ctx.appInputConnection?.commitText(text, 1)
                         mode = KeyboardMode.SKETCH
                     },
                     onClose = {

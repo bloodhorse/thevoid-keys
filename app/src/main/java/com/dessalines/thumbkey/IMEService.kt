@@ -81,11 +81,46 @@ class IMEService :
 
     // The framework's connection is null while no text field is bound, and the framework itself
     // calls this. Kotlin would check a platform value returned as non-null and throw, so pass it
-    // through unchecked, as the Java method does. Nullable would break every caller.
+    // through unchecked, as the Java method does. Nullable would break every caller. Code that can
+    // run with no field bound (composition, onStartInput) uses inputConnectionOrNull instead.
     override fun getCurrentInputConnection(): InputConnection = inputRedirect ?: unchecked(super.getCurrentInputConnection())
 
-    /** The app's text field, even while the keys type into the keyboard's own field. */
-    val appInputConnection: InputConnection get() = super.getCurrentInputConnection()
+    /**
+     * The connection the keys type into, or null while no text field is bound. It is null in
+     * onStartInput after a rotation: the framework re-runs doStartInput on a configuration change
+     * with whatever connection it holds, and the rotating app has already unbound its old one.
+     */
+    val inputConnectionOrNull: InputConnection? get() = inputRedirect ?: super.getCurrentInputConnection()
+
+    /** The app's text field, even while the keys type into the keyboard's own field; null while none is bound. */
+    val appInputConnection: InputConnection? get() = super.getCurrentInputConnection()
+
+    // The cursor updates the keyboard last asked for, kept when no connection was there to take
+    // them, and asked for again when the input view starts on a bound field
+    private var cursorUpdateMode = 0
+    private var cursorUpdatePending = false
+
+    fun requestCursorUpdates(mode: Int): Boolean {
+        cursorUpdateMode = mode
+        val ic = inputConnectionOrNull
+        cursorUpdatePending = ic == null
+        if (ic == null) {
+            Log.d(TAG, "cursor updates ($mode) wait for a connection")
+            return false
+        }
+        return ic.requestCursorUpdates(mode)
+    }
+
+    override fun onStartInputView(
+        info: EditorInfo?,
+        restarting: Boolean,
+    ) {
+        super.onStartInputView(info, restarting)
+        if (cursorUpdatePending) {
+            Log.d(TAG, "cursor updates ($cursorUpdateMode) asked for again on a late connection")
+            requestCursorUpdates(cursorUpdateMode)
+        }
+    }
 
     // Sketch mode's drawing, kept while the keyboard is closed and opened again
     val sketchState = SketchState()
