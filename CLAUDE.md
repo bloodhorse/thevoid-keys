@@ -32,7 +32,7 @@ mostly defaults and a handful of settings; a user can still pick any upstream th
   up-left makes `w` run to 225°). an empty straight stays where it is and types the tap letter, as upstream.
   four- and two-way keys keep upstream's equal cuts; `swipeType` decides, a ghost key makes a key eight-way.
   only the plain-flick branch and the tick read these; drag-return and circular drag still use upstream's
-  `swipeDirection`. on 15 only `o` and `e` are eight-way.
+  `swipeDirection`. on 15 `o`, `e` and `i` are eight-way (`i` since `?` went on its left, which leaves `x` a 30° diagonal).
 - **the word decides the borderline flicks** (`utils/WordPick.kt`, `utils/CharModel.kt`): two lines a flick
   can land near, the edge between two slices (`ANGLE_BAND_DEG` 10 either side) and `min_swipe_length` between
   a flick and the tap (`TRAVEL_BAND_DP` 8 either side). inside a band geometry's weight for its own side runs
@@ -53,7 +53,7 @@ mostly defaults and a handful of settings; a user can still pick any upstream th
   set, nothing to fit them to. every decision lands in the flick log; tune them from `flicks.py`'s "the word".
 - **a tick per slice** (`sliceTickStep` in `KeyboardKey.kt`): on a key without a slide, once the furthest
   point of the raw path is past `min_swipe_length`, each move of it into a different slice that holds
-  something gives `SEGMENT_FREQUENT_TICK` (API 34+, `CLOCK_TICK` below), when vibrate on tap is on. no tick
+  something gives `Tick.play`, when vibrate on tap is on. no tick
   for the first slice it arms in, none for an empty one. it reads the raw path, the reader the smoothed one,
   and the word can still override the slice he felt inside a band. logcat `slice tick:`.
 - **hold for a digit**: holding a letter still types the digit in its slot on the number panel
@@ -65,7 +65,7 @@ mostly defaults and a handful of settings; a user can still pick any upstream th
 - **swiping left across backspace deletes as the thumb moves** (Wurstfinger's delete slide, `deleteSwipeStep`
   in `KeyboardKey.kt`, the `DELETE_SWIPE_*` constants at the top): past 28 dp left of touch-down it goes live,
   one character per 14 dp of travel times a gain from the thumb's speed over the last 40 ms of the trail (1x at
-  200 dp/s and under, 4x at 1500 and over, smoothstep between), a `TEXT_HANDLE_MOVE` tick each (vibrate for
+  200 dp/s and under, 4x at 1500 and over, smoothstep between), a `Tick.play` each (vibrate for
   slide gestures). nothing is selected; what it eats goes in a buffer, and dragging back right in the same
   swipe re-commits it in order through the same stepping, until the buffer is empty (no forward delete). lift
   ends it. this replaced upstream's slide-select-delete on backspace, so its "Backspace: allow normal swipes"
@@ -75,7 +75,7 @@ mostly defaults and a handful of settings; a user can still pick any upstream th
   the flick log `live`).
 - **holding backspace still repeats like iOS** (`KeyboardKey.kt`, the `BACKSPACE_REPEAT_*` constants at the
   top): the first repeat at 400 ms, then characters at an interval easing from 120 to 25 ms over 1.5 s, then
-  from 2 s whole words (`deleteWordBeforeCursor`) every 300 ms; a light tick (`TEXT_HANDLE_MOVE`) on each, when
+  from 2 s whole words (`deleteWordBeforeCursor`) every 300 ms; a light tick (`Tick.play`) on each, when
   vibrate on tap is on. it waits on the press, which a drag start cancels, so a flick or slide before 400 ms
   stays a flick or slide; once it repeats only lifting stops it (it checks the flick log's finger-down before
   each delete), and the release types nothing more. backspace has no `longPress` any more. on his phone:
@@ -171,6 +171,11 @@ a loud gradient and big sharp text that stays put under the keyboard (`adjustNot
 
 ## gotchas
 
+- **on his Nothing Phone (1) only `KEYBOARD_TAP` reaches the motor through `View.performHapticFeedback`.**
+  `TEXT_HANDLE_MOVE` and `SEGMENT_FREQUENT_TICK` return without a buzz, and `dumpsys vibrator_manager` never
+  shows them, so the delete swipe, the hold repeat, the slice tick and the cursor slide were silent for days.
+  every light tick goes through `utils/Tick.kt` (a prebaked `EFFECT_TICK` straight to the vibrator, touch usage,
+  `VIBRATE` in the manifest). to check a haptic, read `dumpsys vibrator_manager | grep keys.debug`.
 - **the input connection is null after a rotation**: on a configuration change android re-runs `doStartInput`
   with whatever connection it holds, and the rotating app has already unbound its old one, so `onStartInput`
   gets none. `onStartInput` rebuilds the view, its first composition runs right there, and upstream's bare

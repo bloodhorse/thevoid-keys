@@ -16,18 +16,19 @@ val KB_EN_MESSAGEASE_MAIN =
             listOf(
                 KeyItemC(
                     center = KeyC("a", size = LARGE),
-                    swipeType = FOUR_WAY_DIAGONAL,
                     bottomRight = KeyC("v"),
+                    right = KeyC("-", color = MUTED),
                 ),
                 KeyItemC(
                     center = KeyC("n", size = LARGE),
-                    swipeType = TWO_WAY_VERTICAL,
+                    swipeType = FOUR_WAY_CROSS,
                     bottom = KeyC("l"),
+                    right = KeyC("!", color = MUTED),
                 ),
                 KeyItemC(
                     center = KeyC("i", size = LARGE),
-                    swipeType = FOUR_WAY_DIAGONAL,
                     bottomLeft = KeyC("x"),
+                    left = KeyC("?", color = MUTED),
                 ),
                 EMOJI_KEY_ITEM,
             ),
@@ -102,18 +103,19 @@ val KB_EN_MESSAGEASE_SHIFTED =
             listOf(
                 KeyItemC(
                     center = KeyC("A", size = LARGE),
-                    swipeType = FOUR_WAY_DIAGONAL,
                     bottomRight = KeyC("V"),
+                    right = KeyC("-", color = MUTED),
                 ),
                 KeyItemC(
                     center = KeyC("N", size = LARGE),
-                    swipeType = TWO_WAY_VERTICAL,
+                    swipeType = FOUR_WAY_CROSS,
                     bottom = KeyC("L"),
+                    right = KeyC("!", color = MUTED),
                 ),
                 KeyItemC(
                     center = KeyC("I", size = LARGE),
-                    swipeType = FOUR_WAY_DIAGONAL,
                     bottomLeft = KeyC("X"),
+                    left = KeyC("?", color = MUTED),
                 ),
                 EMOJI_KEY_ITEM,
             ),

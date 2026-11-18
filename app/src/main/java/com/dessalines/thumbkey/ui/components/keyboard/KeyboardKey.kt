@@ -58,6 +58,7 @@ import com.dessalines.thumbkey.db.DEFAULT_SMOOTHING_WINDOW
 import com.dessalines.thumbkey.utils.CharModel
 import com.dessalines.thumbkey.utils.GestureReader
 import com.dessalines.thumbkey.utils.Slices
+import com.dessalines.thumbkey.utils.Tick
 import com.dessalines.thumbkey.utils.WordPick
 import com.dessalines.thumbkey.utils.outlineColor
 import com.dessalines.thumbkey.utils.selectWordAt
@@ -307,22 +308,8 @@ fun KeyboardKey(
     val view = LocalView.current
     val audioManager = ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
-    /**
-     * The type of haptic feedback to use when moving the cursor with slide
-     * gestures, based on the device's supported API.
-     */
-    val slideHapticConstant =
-        if (Build.VERSION.SDK_INT >= 27) {
-            HapticFeedbackConstants.TEXT_HANDLE_MOVE
-        } else {
-            // Compatible with API 24, but vibration will not distinguish between tap and slide
-            HapticFeedbackConstants.KEYBOARD_TAP
-        }
-
     // a light tick each time the furthest point of a flick, past the line, moves into another slice
     // that holds something (none at touch-down, none for an empty slice)
-    val sliceTick =
-        if (Build.VERSION.SDK_INT >= 34) HapticFeedbackConstants.SEGMENT_FREQUENT_TICK else HapticFeedbackConstants.CLOCK_TICK
     var tickScanned by remember { mutableIntStateOf(0) }
     var tickFar by remember { mutableFloatStateOf(0f) }
     var tickFarX by remember { mutableFloatStateOf(0f) }
@@ -345,8 +332,8 @@ fun KeyboardKey(
         val was = tickSlice
         tickSlice = dir
         if (was == null || was == dir || resolveSwipe(dir) == resolveSwipe(null)) return
-        val felt = vibrateOnTap && view.performHapticFeedback(sliceTick)
-        Log.d(TAG, "slice tick: $was -> $dir, haptic $felt")
+        if (vibrateOnTap) Tick.play(ctx)
+        Log.d(TAG, "slice tick: $was -> $dir, haptic $vibrateOnTap")
     }
 
     LaunchedEffect(key1 = isPressed) {
@@ -397,7 +384,7 @@ fun KeyboardKey(
             deleteEaten.append(before, before.length - n, before.length)
             ic.deleteSurroundingText(n, 0)
             deleteTicks++
-            if (vibrateOnSlide) view.performHapticFeedback(slideHapticConstant)
+            if (vibrateOnSlide) Tick.play(ctx)
         }
         while (deleteResidual >= DELETE_SWIPE_STEP_DP) {
             if (deleteEaten.isEmpty()) {
@@ -410,7 +397,7 @@ fun KeyboardKey(
             ic.commitText(deleteEaten.substring(end - n), 1)
             deleteEaten.setLength(end - n)
             deleteTicks++
-            if (vibrateOnSlide) view.performHapticFeedback(slideHapticConstant)
+            if (vibrateOnSlide) Tick.play(ctx)
         }
         if (deleteEaten.isEmpty() && deleteResidual > 0) deleteResidual = 0f
     }
@@ -442,7 +429,7 @@ fun KeyboardKey(
                         val t = ((now - firstAt).toFloat() / BACKSPACE_REPEAT_EASE_MS).coerceAtMost(1f)
                         (BACKSPACE_REPEAT_START_MS + (BACKSPACE_REPEAT_END_MS - BACKSPACE_REPEAT_START_MS) * t).toLong()
                     }
-                if (vibrateOnTap) view.performHapticFeedback(slideHapticConstant)
+                if (vibrateOnTap) Tick.play(ctx)
                 delay(pause)
             }
             Log.d(TAG, "backspace repeat: $chars chars, $words words")
@@ -483,7 +470,7 @@ fun KeyboardKey(
             }
             tickCount++
             slideHoldTickCount = tickCount
-            if (vibrateOnSlide) view.performHapticFeedback(slideHapticConstant)
+            if (vibrateOnSlide) Tick.play(ctx)
         }
     }
 
@@ -505,7 +492,7 @@ fun KeyboardKey(
             }
             tickCount++
             slideHoldTickCount = tickCount
-            if (vibrateOnSlide) view.performHapticFeedback(slideHapticConstant)
+            if (vibrateOnSlide) Tick.play(ctx)
         }
     }
 
@@ -762,7 +749,7 @@ fun KeyboardKey(
                                     // reset offsetX, do not reset offsetY when sliding, it will break selecting
                                     offsetX = 0f
                                     // selection has changed; give feedback
-                                    if (vibrateOnSlide) view.performHapticFeedback(slideHapticConstant)
+                                    if (vibrateOnSlide) Tick.play(ctx)
                                 }
                             } else if ((
                                     slideSpacebarDeadzoneEnabled &&
@@ -838,7 +825,7 @@ fun KeyboardKey(
                                     // reset offsetX, do not reset offsetY when sliding, it will break selecting
                                     offsetX = 0f
                                     // selection has changed; give feedback
-                                    if (vibrateOnSlide) view.performHapticFeedback(slideHapticConstant)
+                                    if (vibrateOnSlide) Tick.play(ctx)
                                 }
                             }
                         } else if (key.slideType == SlideType.DELETE && slideEnabled) {
