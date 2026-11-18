@@ -32,7 +32,7 @@ mostly defaults and a handful of settings; a user can still pick any upstream th
   up-left makes `w` run to 225°). an empty straight stays where it is and types the tap letter, as upstream.
   four- and two-way keys keep upstream's equal cuts; `swipeType` decides, a ghost key makes a key eight-way.
   only the plain-flick branch and the tick read these; drag-return and circular drag still use upstream's
-  `swipeDirection`. on 15 `o`, `e` and `i` are eight-way (`i` since `?` went on its left, which leaves `x` a 30° diagonal).
+  `swipeDirection`. on 15 `o`, `e`, `a` and `i` are eight-way: `-` right of `a` and `?` left of `i` (with `!` right of `n`, their MessagEase spots) leave `v` and `x` 30° diagonals.
 - **the word decides the borderline flicks** (`utils/WordPick.kt`, `utils/CharModel.kt`): two lines a flick
   can land near, the edge between two slices (`ANGLE_BAND_DEG` 10 either side) and `min_swipe_length` between
   a flick and the tap (`TRAVEL_BAND_DP` 8 either side). inside a band geometry's weight for its own side runs
