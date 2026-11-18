@@ -58,7 +58,7 @@ mostly defaults and a handful of settings; a user can still pick any upstream th
   and the word can still override the slice he felt inside a band. logcat `slice tick:`.
 - **hold for a digit**: holding a letter still types the digit in its slot on the number panel
   (`numericKey`, the same `[i][j]` of `modes.numeric`); a key's own `longPress` wins. the timeout is a setting
-  (Behavior → "Hold for a digit", 300–1500 ms, default 700), fed to `combinedClickable` through a
+  (Behavior → "Hold for a digit", 300–1500 ms, default 700, his 490, kept by grant.sh), fed to `combinedClickable` through a
   `ViewConfiguration` that delegates everything but `longPressTimeoutMillis`, provided around each key.
 - **the number panel is a PC numpad** (`keyboards/NumericENMessagEase.kt`, shared by every MessagEase layout):
   7 8 9 on top, 1 2 3 at the bottom, 0 where it was; only the digits moved, the symbols around them stayed.
