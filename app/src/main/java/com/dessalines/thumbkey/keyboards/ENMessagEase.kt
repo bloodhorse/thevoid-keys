@@ -21,9 +21,10 @@ val KB_EN_MESSAGEASE_MAIN =
                 ),
                 KeyItemC(
                     center = KeyC("n", size = LARGE),
-                    swipeType = FOUR_WAY_CROSS,
                     bottom = KeyC("l"),
                     right = KeyC("!", color = MUTED),
+                    left = KeyC("+", color = MUTED),
+                    bottomLeft = KeyC("/", color = MUTED),
                 ),
                 KeyItemC(
                     center = KeyC("i", size = LARGE),
@@ -108,9 +109,10 @@ val KB_EN_MESSAGEASE_SHIFTED =
                 ),
                 KeyItemC(
                     center = KeyC("N", size = LARGE),
-                    swipeType = FOUR_WAY_CROSS,
                     bottom = KeyC("L"),
                     right = KeyC("!", color = MUTED),
+                    left = KeyC("+", color = MUTED),
+                    bottomLeft = KeyC("/", color = MUTED),
                 ),
                 KeyItemC(
                     center = KeyC("I", size = LARGE),
